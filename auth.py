@@ -1,7 +1,6 @@
 """auth.py — 로그인 / 회원가입 / 마이페이지"""
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from user_store         import register_user, login_user
 from rating_store       import get_temperature, get_score_count, temp_color, temp_label
@@ -215,25 +214,5 @@ def render_my_page():
               {'[파티장] ' if is_creator else ''}<b>{p['creator_name']}</b>의 파티 {s} |
               출발 {p['depart_time']}<br>
               {f"내 주문: {order_txt}" if order_txt else ""}
-              {f"<br>📍 집합: {p['gather_location']}" if p.get('gather_location') else ""}
             </div>""", unsafe_allow_html=True)
-
-            if p.get("gather_location") and p.get("gather_lat"):
-                components.html(
-                    _map_view(p["gather_lat"], p["gather_lng"], p["gather_location"]),
-                    height=220, scrolling=False)
-
-
-def _map_view(lat, lng, name):
-    return f"""<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>html,body,#map{{margin:0;padding:0;width:100%;height:220px;}}</style>
-</head><body><div id="map"></div>
-<script>
-var m=L.map('map').setView([{lat},{lng}],16);
-L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
-  {{attribution:'© OpenStreetMap'}}).addTo(m);
-L.marker([{lat},{lng}]).addTo(m).bindPopup('{name}').openPopup();
-</script></body></html>"""
+          
