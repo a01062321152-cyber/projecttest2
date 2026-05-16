@@ -6,6 +6,7 @@ import streamlit.components.v1 as components
 from essentials_store import (create_party, get_open_parties, get_party,
                                apply_party, cancel_apply, close_party, delete_party)
 from notification_store import push
+from wishlist_page import _contact_input, _account_input
 
 CSS = """
 <style>
@@ -22,19 +23,6 @@ CSS = """
 </style>
 """
 
-# ── 유효성 검사 헬퍼 ─────────────────────────────────────────────────────────
-
-def _validate_contact(v: str) -> str | None:
-    """연락처 검증. 문제 있으면 에러 메시지, 없으면 None."""
-    v = v.strip()
-    if not v:
-        return "연락처를 입력해 주세요."
-    if len(v) < 3:
-        return "연락처가 너무 짧습니다."
-    # 숫자로만 된 짧은 문자열 방지 (이름 같은 한글만 입력 방지)
-    if re.fullmatch(r'[가-힣\s]{1,4}', v):
-        return "올바른 연락처를 입력해 주세요. (전화번호 또는 카카오톡 ID)"
-    return None
 
 def _validate_payment_dest(v: str) -> str | None:
     v = v.strip()
@@ -156,20 +144,17 @@ def render_essentials_popup(item: dict):
     elif sub == "apply":
         st.markdown("#### 📝 파티 신청")
 
-        contact = st.text_input(
-            "연락처",
-            placeholder="카카오톡 ID 또는 010-0000-0000",
-            help="전화번호(010-xxxx-xxxx) 또는 카카오톡 ID를 입력하세요.")
+        st.markdown("**연락처**")
+        contact, contact_err = _contact_input("ess_apply")
         qty = st.number_input("필요 개수", min_value=1, max_value=99, value=1, step=1)
 
         if st.button("신청 완료", use_container_width=True, key="ess_apply_submit"):
-            err = _validate_contact(contact)
-            if err:
-                st.error(err)
+            if contact_err or not contact:
+                st.error(contact_err or "연락처를 입력해 주세요.")
             else:
                 ok2, msg = apply_party(
                     st.session_state.ess_party_id, uid,
-                    user.get("name", ""), contact.strip(), int(qty))
+                    user.get("name", ""), contact, int(qty))
                 if ok2:
                     push(uid, "pot_joined", f"'{label}' 생필품 파티에 신청됐습니다.")
                     st.success("신청 완료!")
@@ -207,19 +192,16 @@ def render_essentials_popup(item: dict):
 
             price_per = st.number_input("개당 가격 (원)", min_value=0, step=100,
                                          value=1000, key="ess_price_per")
-            pay_dest  = st.text_input("송금처",
-                                       placeholder="예: 국민은행 123-456-789 홍길동 / 카카오페이 010-0000-0000",
-                                       help="계좌번호(은행명 포함) 또는 카카오페이 번호를 입력하세요.",
-                                       key="ess_pay_dest")
+            st.markdown("**송금 계좌**")
+            pay_dest, pay_dest_err = _account_input("ess_close")
 
             if st.button("마감 처리", use_container_width=True, key="ess_close_submit"):
-                err = _validate_payment_dest(pay_dest)
-                if err:
-                    st.error(err)
+                if pay_dest_err or not pay_dest or pay_dest.startswith("은행 선택"):
+                    st.error(pay_dest_err or "계좌번호를 올바르게 입력해 주세요.")
                 elif price_per <= 0:
                     st.error("개당 가격을 입력해 주세요.")
                 else:
-                    closed = close_party(p["party_id"], int(price_per), pay_dest.strip())
+                    closed = close_party(p["party_id"], int(price_per), pay_dest)
                     if closed:
                         for a in applicants:
                             amount = a["qty"] * int(price_per)
