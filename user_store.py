@@ -9,10 +9,9 @@ import json
 import hashlib
 from pathlib import Path
 
-USER_DB_PATH  = Path("users.json")
-LIST_DB_PATH  = Path("lists.json")
+USER_DB_PATH = Path("users.json")
+LIST_DB_PATH = Path("lists.json")
 
-# ── 내부 유틸 ─────────────────────────────────────────────────────────────────
 
 def _hash(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
@@ -33,10 +32,10 @@ def _load_lists() -> dict:
 def _save_lists(data: dict) -> None:
     LIST_DB_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-# ── 초기화: admin 계정 + 기본 리스트 ─────────────────────────────────────────
+
+# ── 초기화 ────────────────────────────────────────────────────────────────────
 
 def initialize():
-    """앱 시작 시 1회 호출. admin 계정과 기본 리스트를 없으면 생성."""
     # admin 계정
     db = _load_users()
     if "admin" not in db:
@@ -48,20 +47,31 @@ def initialize():
         }
         _save_users(db)
 
-    # 기본 리스트 데이터
+    # 기본 리스트 (price 필드 포함)
     lists = _load_lists()
     if not lists:
         lists = {
             "list1": {
                 "title": "List 1 — Title",
-                "items": [{"label": "Item 1", "image_url": ""}],
+                "items": [{"label": "Item 1", "image_url": "", "price": 0}],
             },
             "list2": {
                 "title": "List 2 — Title",
-                "items": [{"label": "Item 1", "image_url": ""}],
+                "items": [{"label": "Item 1", "image_url": "", "price": 0}],
             },
         }
         _save_lists(lists)
+    else:
+        # 기존 데이터에 price 필드 없으면 마이그레이션
+        changed = False
+        for lk in lists:
+            for item in lists[lk].get("items", []):
+                if "price" not in item:
+                    item["price"] = 0
+                    changed = True
+        if changed:
+            _save_lists(lists)
+
 
 # ── 유저 API ──────────────────────────────────────────────────────────────────
 
@@ -102,38 +112,42 @@ def login_user(user_id: str, password: str) -> tuple[bool, str | dict]:
 
     return True, {k: v for k, v in user.items() if k != "password_hash"}
 
+
 # ── 리스트 API ────────────────────────────────────────────────────────────────
 
 def get_lists() -> dict:
-    """list1, list2 전체 데이터 반환"""
     return _load_lists()
 
 
 def update_list_title(list_key: str, new_title: str) -> None:
-    """리스트 제목 수정 (list_key: 'list1' | 'list2')"""
     data = _load_lists()
     data[list_key]["title"] = new_title.strip()
     _save_lists(data)
 
 
-def add_list_item(list_key: str, label: str, image_url: str = "") -> None:
-    """리스트에 항목 추가"""
+def add_list_item(list_key: str, label: str, image_url: str = "", price: int = 0) -> None:
     data = _load_lists()
-    data[list_key]["items"].append({"label": label.strip(), "image_url": image_url.strip()})
+    data[list_key]["items"].append({
+        "label": label.strip(),
+        "image_url": image_url.strip(),
+        "price": int(price),
+    })
     _save_lists(data)
 
 
-def update_list_item(list_key: str, idx: int, label: str, image_url: str) -> None:
-    """리스트 항목 수정"""
+def update_list_item(list_key: str, idx: int, label: str, image_url: str, price: int) -> None:
     data = _load_lists()
-    data[list_key]["items"][idx] = {"label": label.strip(), "image_url": image_url.strip()}
+    data[list_key]["items"][idx] = {
+        "label": label.strip(),
+        "image_url": image_url.strip(),
+        "price": int(price),
+    }
     _save_lists(data)
 
 
 def delete_list_item(list_key: str, idx: int) -> None:
-    """리스트 항목 삭제"""
     data = _load_lists()
     items = data[list_key]["items"]
-    if len(items) > 1:          # 최소 1개 유지
+    if len(items) > 1:
         items.pop(idx)
     _save_lists(data)
