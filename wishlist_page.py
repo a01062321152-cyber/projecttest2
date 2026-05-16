@@ -255,7 +255,7 @@ def render_wishlist_page():
     temp      = get_temperature(uid) if is_logged else 0.0
     credits   = get_credits(uid) if is_logged else 0
 
-    st.markdown('<div class="tab-section-title">🎰 룰렛 시스템</div>',
+    st.markdown('<div class="tab-section-title">🎰 럭키 룰렛</div>',
                 unsafe_allow_html=True)
 
     if not is_logged:
@@ -269,7 +269,7 @@ def render_wishlist_page():
     with col_t:
         st.markdown(f"🌡️ **매너 온도: {temp}°**")
 
-    st.caption(f"룰렛 1회 참여 비용: {SPIN_CREDIT_COST} 크래딧 | 참여 조건: 매너 온도 50° 이상")
+    st.caption(f"1회 참여 비용: {SPIN_CREDIT_COST}🪙 크래딧 | 참여 조건: 매너 온도 50° 이상")
     st.markdown("---")
 
     for k, v in [("roulette_result", None), ("roulette_spin_rid", None),
@@ -279,9 +279,9 @@ def render_wishlist_page():
     is_admin = st.session_state.get("user", {}).get("is_admin", False)
 
     if is_admin:
-        rt1, rt2, rt3 = st.tabs(["🎁 상품 목록", "📦 내 상품 관리", "🛡️ 관리자"])
+        rt1, rt2, rt3 = st.tabs(["🎁 상품 목록", "📦 내 등록 상품", "🛡️ 관리자"])
     else:
-        rt1, rt2 = st.tabs(["🎁 상품 목록", "📦 내 상품 관리"])
+        rt1, rt2 = st.tabs(["🎁 상품 목록", "📦 내 등록 상품"])
         rt3 = None
 
     # ── 상품 목록 ─────────────────────────────────────────────────────────
@@ -289,7 +289,7 @@ def render_wishlist_page():
         active_items = get_active_items(exclude_user_id=uid)
 
         if not active_items:
-            st.info("등록된 상품이 없습니다. 내 상품 관리에서 등록해 보세요!")
+            st.info("등록된 상품이 없습니다. 내 등록 상품 탭에서 등록해 보세요!")
         else:
             for item in active_items:
                 rid   = item["roulette_id"]
@@ -325,7 +325,7 @@ def render_wishlist_page():
                     elif credits < SPIN_CREDIT_COST:
                         st.warning(f"크래딧이 부족합니다. (필요: {SPIN_CREDIT_COST}, 보유: {credits})")
                     else:
-                        if st.button(f"🎰 룰렛 돌리기 ({SPIN_CREDIT_COST}🪙)",
+                        if st.button(f"🎰 도전! ({SPIN_CREDIT_COST}🪙 소모)",
                                      key=f"spin_{rid}"):
                             # 크래딧 먼저 차감
                             ok, new_bal = deduct_credits(uid, SPIN_CREDIT_COST)
@@ -411,13 +411,13 @@ def render_wishlist_page():
 
     # ── 내 상품 관리 ──────────────────────────────────────────────────────
     with rt2:
-        st.markdown("**내 등록 상품**")
+        st.markdown("**내가 등록한 상품**")
         my_items    = get_my_items(uid)
         # active 상품만 표시 (won·removed 자동 제외)
         active_mine = [i for i in my_items if i["status"] == "active"]
 
         if not active_mine:
-            st.info("등록 중인 상품이 없습니다.")
+            st.info("현재 등록된 상품이 없습니다.")
         else:
             for item in active_mine:
                 st.markdown(f"**{item['item_name']}** — 🟢 등록중 | 시도 {item['spin_count']}회")
@@ -427,7 +427,7 @@ def render_wishlist_page():
                 st.divider()
 
         st.markdown("---")
-        st.markdown("**➕ 새 상품 등록**")
+        st.markdown("**➕ 룰렛 상품 등록**")
         r_name = st.text_input("상품 이름", placeholder="예: 스타벅스 아메리카노 기프티콘", key="r_name")
         r_desc = st.text_area("상품 설명", placeholder="상태, 브랜드 등 간단히 적어주세요", key="r_desc")
         st.markdown("**연락처** (당첨자가 연락할 방법)")
@@ -450,7 +450,7 @@ def render_wishlist_page():
     # ── 관리자 탭 ─────────────────────────────────────────────────────────
     if rt3 is not None:
         with rt3:
-            st.markdown("**🛡️ 전체 룰렛 상품 관리**")
+            st.markdown("**🛡️ 전체 상품 현황**")
             all_items = get_all_items()
             status_map = {"active": "🟢 등록중", "won": "🏆 당첨됨", "removed": "❌ 삭제됨"}
 
