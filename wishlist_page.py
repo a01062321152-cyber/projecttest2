@@ -354,43 +354,58 @@ def render_wishlist_page():
                                 is_win, msg = spin(rid, uid)
                                 st.session_state.roulette_result   = (is_win, msg, rid)
                                 st.session_state.roulette_spin_rid = rid
+                                st.session_state.roulette_spinning = True
                                 st.rerun()
 
                     st.divider()
 
-            # 룰렛 애니메이션 + 결과
-            if st.session_state.roulette_result:
+            # ── 룰렛 애니메이션 (5초) + 결과 ─────────────────────────────
+            if st.session_state.get("roulette_spinning") and st.session_state.roulette_result:
+                import time, random as _r
                 is_win, msg, rid = st.session_state.roulette_result
                 item = get_item(rid)
 
                 st.markdown("---")
-                st.markdown("### 🎰 룰렛 결과")
-                components.html(ROULETTE_HTML, height=240, scrolling=False)
-
-                st.markdown(f"""
-                <script>
-                setTimeout(function(){{
-                  var frames=document.querySelectorAll('iframe');
-                  for(var f of frames){{
-                    try{{
-                      f.contentWindow.postMessage({{type:'SPIN',isWin:{'true' if is_win else 'false'}}},'*');
-                    }}catch(e){{}}
-                  }}
-                }}, 300);
-                </script>""", unsafe_allow_html=True)
+                ph = st.empty()
+                ph.components.html(_roulette_anim_html(is_win), height=260, scrolling=False)
+                time.sleep(5)
+                ph.empty()
+                st.session_state.roulette_spinning = False
 
                 if is_win and item:
-                    st.success(f"🎉 **당첨!** {item['item_name']}")
-                    st.info(f"📞 당첨 연락처: **{item['contact']}**\n\n"
-                            f"등록자({item['owner_name']})에게 연락해 상품을 수령하세요!")
+                    st.balloons()
+                    win_msgs = ["🎉 대박!! 당첨됐습니다!!!","🥳 오늘 운이 완전 터졌네요!",
+                                "🏆 믿기지 않지만... 당첨!!!","✨ 하늘이 당신 편이에요! 당첨!"]
+                    st.success(_r.choice(win_msgs))
+                    st.info(f"**상품:** {item['item_name']}\n\n**등록자:** {item['owner_name']}\n\n📞 **연락처:** {item['contact']}")
                     push(item["owner_id"], "pot_ended",
-                         f"{uname}님이 '{item['item_name']}' 룰렛에 당첨됐습니다! "
-                         f"연락을 기다려 주세요.")
+                         f"{uname}님이 '{item['item_name']}' 룰렛에 당첨됐습니다! 연락을 기다려 주세요.")
+                else:
+                    lose_msgs = ["😢 아쉽네요... 꽝입니다.","💀 오늘은 운이 없어요. 다음엔 될 거예요!",
+                                 "🤡 꽝! 세상이 야속하네요...","😭 꽝... 하지만 확률이 올랐어요!",
+                                 "🫠 녹아내리는 기분이지만 포기하지 마세요!","🥲 꽝이지만 당신은 소중한 사람입니다."]
+                    prob_left = max(1, 20 - (item["spin_count"] if item else 20))
+                    st.warning(_r.choice(lose_msgs))
+                    st.caption(f"다음 도전 확률: **1/{prob_left}** (점점 올라가는 중!)")
+
+                if st.button("확인", key="roulette_confirm"):
+                    st.session_state.roulette_result   = None
+                    st.session_state.roulette_spin_rid = None
+                    st.session_state.roulette_spinning = False
+                    st.rerun()
+
+            elif st.session_state.roulette_result and not st.session_state.get("roulette_spinning"):
+                import random as _r
+                is_win, msg, rid = st.session_state.roulette_result
+                item = get_item(rid)
+                st.markdown("---")
+                if is_win and item:
+                    st.success(f"🎉 당첨! **{item['item_name']}**")
+                    st.info(f"📞 연락처: **{item['contact']}** ({item['owner_name']})")
                 else:
                     prob_left = max(1, 20 - (item["spin_count"] if item else 20))
                     st.warning(f"😢 꽝! 다음 확률: **1/{prob_left}**")
-
-                if st.button("확인", key="roulette_confirm"):
+                if st.button("확인", key="roulette_confirm2"):
                     st.session_state.roulette_result   = None
                     st.session_state.roulette_spin_rid = None
                     st.rerun()
@@ -441,4 +456,81 @@ var m=L.map('map').setView([{lat},{lng}],16);
 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
   {{attribution:'© OpenStreetMap'}}).addTo(m);
 L.marker([{lat},{lng}]).addTo(m).bindPopup('{name}').openPopup();
+</script></body></html>"""
+
+
+def _roulette_anim_html(is_win: bool) -> str:
+    """5초간 돌아가는 룰렛 캔버스 애니메이션"""
+    win_js = "true" if is_win else "false"
+    return f"""<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{background:transparent;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;height:260px;
+  font-family:'DM Sans',sans-serif;}}
+#wrap{{position:relative;width:200px;height:200px;}}
+canvas{{border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,.2);}}
+#ptr{{position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  font-size:1.8rem;line-height:1;}}
+#msg{{margin-top:10px;font-size:.95rem;font-weight:700;color:#1a1a1a;
+  text-align:center;min-height:22px;}}
+</style></head><body>
+<div id="wrap">
+  <div id="ptr">▼</div>
+  <canvas id="c" width="200" height="200"></canvas>
+</div>
+<div id="msg">🎰 돌아가는 중...</div>
+<script>
+var SEG=['🎁 당첨','😢 꽝','😅 꽝','🥲 꽝','💀 꽝',
+         '😵 꽝','🤦 꽝','😭 꽝','🙈 꽝','😤 꽝',
+         '🫠 꽝','🤡 꽝','😾 꽝','😩 꽝','🤯 꽝',
+         '😬 꽝','🥴 꽝','🫥 꽝','🫣 꽝','😱 꽝'];
+var COL=['#3B82F6','#EF4444','#F59E0B','#10B981','#8B5CF6',
+         '#EC4899','#14B8A6','#F97316','#6366F1','#84CC16',
+         '#EF4444','#3B82F6','#F59E0B','#10B981','#8B5CF6',
+         '#EC4899','#14B8A6','#F97316','#6366F1','#84CC16'];
+var n=SEG.length, arc=2*Math.PI/n;
+var cv=document.getElementById('c'), ctx=cv.getContext('2d');
+var cx=100, cy=100, r=94;
+var isWin={win_js};
+
+function draw(angle){{
+  ctx.clearRect(0,0,200,200);
+  for(var i=0;i<n;i++){{
+    var s=angle+i*arc;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,s,s+arc); ctx.closePath();
+    ctx.fillStyle=COL[i]; ctx.fill();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(s+arc/2);
+    ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif';
+    ctx.textAlign='right'; ctx.fillText(SEG[i],r-6,4); ctx.restore();
+  }}
+  ctx.beginPath(); ctx.arc(cx,cy,20,0,2*Math.PI);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.strokeStyle='#E5E7EB'; ctx.lineWidth=2; ctx.stroke();
+}}
+
+draw(0);
+
+// 당첨이면 index 0, 꽝이면 1~n-1 랜덤
+var stopIdx = isWin ? 0 : (Math.floor(Math.random()*(n-1))+1);
+var spins   = 6 + Math.random()*2;  // 6~8바퀴
+var finalAngle = -(spins*2*Math.PI + stopIdx*arc + arc/2);
+var duration   = 5000;
+var startTime  = null;
+
+function animate(ts){{
+  if(!startTime) startTime=ts;
+  var prog = Math.min((ts-startTime)/duration, 1);
+  var ease = 1 - Math.pow(1-prog, 4);
+  draw(finalAngle*ease);
+  if(prog < 1){{
+    requestAnimationFrame(animate);
+  }} else {{
+    document.getElementById('msg').innerText =
+      isWin ? '🎉 당첨!!!' : '😢 꽝...';
+  }}
+}}
+requestAnimationFrame(animate);
 </script></body></html>"""
