@@ -4,7 +4,7 @@ import streamlit as st
 from user_store import (register_user, login_user, get_all_users,
                          delete_user, get_credits, add_credits,
                          set_credits, SCHOOLS)
-from rating_store import get_temperature, get_score_count, temp_color, temp_label
+from rating_store import get_temperature, get_score_count, temp_color, temp_label, set_temperature
 from notification_store import push_all
 from essentials_store import get_all_parties as ess_all
 
@@ -208,6 +208,26 @@ def render_my_page():
                             st.markdown(f"**매너 온도:** {u_temp}° ({u_cnt}회 평가)")
                         with c2:
                             st.markdown(f"**보유 크래딧:** {u_cred}")
+
+                        # 매너 온도 조정
+                        st.markdown("**매너 온도 조정**")
+                        temp_cols = st.columns([3, 1, 1])
+                        with temp_cols[0]:
+                            new_temp = st.number_input(
+                                "새 매너 온도 (0~100)", min_value=0.0, max_value=100.0,
+                                value=float(u_temp), step=0.5,
+                                key=f"temp_{u_id}")
+                        with temp_cols[1]:
+                            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                            if st.button("저장", key=f"temp_save_{u_id}"):
+                                set_temperature(u_id, new_temp)
+                                st.success("매너 온도 저장됨"); st.rerun()
+                        with temp_cols[2]:
+                            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                            if st.button("초기화", key=f"temp_reset_{u_id}",
+                                         help="50°로 초기화"):
+                                set_temperature(u_id, 50.0)
+                                st.rerun()
 
                         # 크래딧 직접 조정
                         st.markdown("**크래딧 조정**")
