@@ -299,7 +299,15 @@ def render_wishlist_page():
                 col_img, col_info = st.columns([1, 3])
                 with col_img:
                     if item.get("image_url","").strip():
-                        st.image(item["image_url"], width=80)
+                        try:
+                            st.image(item["image_url"], width=80)
+                        except Exception:
+                            st.markdown(
+                                '<div style="width:80px;height:80px;border-radius:10px;'
+                                'background:linear-gradient(135deg,#EEF4FF,#DBEAFE);'
+                                'display:flex;align-items:center;justify-content:center;'
+                                'font-size:2rem;">🎁</div>',
+                                unsafe_allow_html=True)
                     else:
                         st.markdown(
                             '<div style="width:80px;height:80px;border-radius:10px;'
@@ -455,7 +463,10 @@ def render_wishlist_page():
                     col_i, col_t, col_b = st.columns([1, 5, 1])
                     with col_i:
                         if item.get("image_url","").strip():
-                            st.image(item["image_url"], width=60)
+                            try:
+                                st.image(item["image_url"], width=60)
+                            except Exception:
+                                st.markdown("🎁")
                         else:
                             st.markdown("🎁")
                     with col_t:
