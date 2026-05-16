@@ -367,7 +367,8 @@ def render_wishlist_page():
 
                 st.markdown("---")
                 ph = st.empty()
-                ph.components.html(_roulette_anim_html(is_win), height=260, scrolling=False)
+                with ph:
+                    components.html(_roulette_anim_html(is_win), height=260, scrolling=False)
                 time.sleep(5)
                 ph.empty()
                 st.session_state.roulette_spinning = False
