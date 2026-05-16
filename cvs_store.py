@@ -16,19 +16,23 @@ def _w(d):
 
 # ── 파티 생성 (유저) ─────────────────────────────────────────────────────────
 def create_party(creator_id: str, creator_name: str,
-                 depart_time: str, contact: str, account: str) -> str:
+                 depart_time: str, contact: str, account: str,
+                 visit_location: str = "", visit_lat: float = 0.0,
+                 visit_lng: float = 0.0) -> str:
     d = _r()
     pid = str(uuid.uuid4())[:8]
     d[pid] = {
         "party_id": pid,
         "creator_id": creator_id,
         "creator_name": creator_name,
-        "depart_time": depart_time,   # "HH:MM"
+        "depart_time": depart_time,
         "contact": contact,
         "account": account,
-        "status": "waiting",          # waiting | departed | arrived
-        "orders": [],                 # [{user_id, name, item_label, item_image,
-                                      #   qty, price, paid, confirmed}]
+        "visit_location": visit_location,   # 방문할 편의점 위치
+        "visit_lat": visit_lat,
+        "visit_lng": visit_lng,
+        "status": "waiting",
+        "orders": [],
         "gather_location": "",
         "gather_lat": 0.0,
         "gather_lng": 0.0,
