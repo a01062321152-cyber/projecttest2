@@ -31,6 +31,17 @@ def get_temperature(user_id: str) -> float:
 def get_score_count(user_id: str) -> int:
     return len(_load().get(user_id, {}).get("scores", []))
 
+def set_temperature(user_id: str, temp: float) -> bool:
+    """관리자용: 매너 온도 직접 설정 (0~100)"""
+    temp = max(0.0, min(100.0, round(temp, 1)))
+    d = _load()
+    if user_id not in d:
+        d[user_id] = {"scores": [], "temperature": temp}
+    else:
+        d[user_id]["temperature"] = temp
+    _save(d)
+    return True
+
 def temp_color(temp: float) -> str:
     if temp >= 80:   return "#EF4444"
     elif temp >= 60: return "#F59E0B"
