@@ -6,10 +6,9 @@ import streamlit.components.v1 as components
 from auth           import render_auth_page, render_my_page
 from wishlist_page  import render_wishlist_page
 from essentials_page import render_essentials_popup
-from cvs_page       import render_cvs_popup
 from user_store     import (initialize, get_lists, get_all_user_ids, get_list_type,
-                             update_list_title, add_list_item, update_list_item, delete_list_item,
-                             add_list, delete_list)
+                             update_list_title, update_list_type, add_list_item,
+                             update_list_item, delete_list_item, add_list, delete_list)
 from notification_store import (get_notifications, get_unread_count,
                                  mark_all_read, clear_notifications)
 
@@ -195,6 +194,15 @@ def render_admin_editor(list_key: str, info: dict):
         if st.button("제목 저장", key=f"save_title_{list_key}"):
             update_list_title(list_key, new_title); st.success("저장"); st.rerun()
 
+        # 리스트 타입 변경 (항상 essentials로 통일 가능)
+        cur_type = info.get("type", "essentials")
+        type_label = {"essentials": "🧴 생필품", "cvs": "🏪 편의점 (구버전)"}
+        st.caption(f"현재 타입: {type_label.get(cur_type, cur_type)}")
+        if cur_type != "essentials":
+            if st.button("🔄 생필품 타입으로 변경", key=f"type_{list_key}"):
+                update_list_type(list_key, "essentials")
+                st.success("타입이 생필품으로 변경됐습니다."); st.rerun()
+
         st.divider()
         all_uids = get_all_user_ids()
 
@@ -249,8 +257,9 @@ if st.session_state.modal_item is not None:
     mtype = st.session_state.modal_type
     if mtype == "essentials":
         render_essentials_popup(st.session_state.modal_item)
-    elif mtype == "cvs":
-        render_cvs_popup(st.session_state.modal_item)
+    else:
+        # 구버전 cvs 타입 항목도 essentials 팝업으로 처리
+        render_essentials_popup(st.session_state.modal_item)
 
 else:
     page = st.session_state.page
@@ -270,13 +279,7 @@ else:
             with st.expander("➕ 새 리스트 추가", expanded=False):
                 new_list_title = st.text_input("리스트 제목", key="new_list_title",
                                                 placeholder="예: 냉동식품")
-                new_list_type  = st.radio(
-                    "리스트 타입",
-                    options=["essentials", "cvs"],
-                    format_func=lambda x: "🧴 생필품 (정기구메)" if x=="essentials" else "🏪 편의점",
-                    horizontal=True,
-                    key="new_list_type",
-                )
+                new_list_type = "essentials"  # 생필품 단일 타입
                 if st.button("➕ 리스트 추가", key="add_list_btn", use_container_width=True):
                     if new_list_title.strip():
                         new_key = add_list(new_list_title, new_list_type)
