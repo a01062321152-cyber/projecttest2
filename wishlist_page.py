@@ -289,10 +289,10 @@ def render_wishlist_page():
 
                             elif p["status"] == "arrived" and p.get("gather_location"):
                                 st.success(f"📍 집합 위치: {p['gather_location']}")
-                                from cvs_store import _map_view_stub  # 아래 inline
                                 components.html(_map_view_inline(
                                     p["gather_lat"], p["gather_lng"], p["gather_location"]),
                                     height=260, scrolling=False)
+
 
     # ══════════════════════════════════════════════════════════════════════
     # TAB 2 — 룰렛 시스템
