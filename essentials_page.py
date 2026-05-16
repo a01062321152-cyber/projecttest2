@@ -1,10 +1,11 @@
 """essentials_page.py — 생필품 정기구메 파티 UI"""
 
+import re
 import streamlit as st
 import streamlit.components.v1 as components
 from essentials_store import (create_party, get_open_parties, get_party,
                                apply_party, cancel_apply, close_party, delete_party)
-from notification_store import push, push_all
+from notification_store import push
 
 CSS = """
 <style>
@@ -21,6 +22,29 @@ CSS = """
 </style>
 """
 
+# ── 유효성 검사 헬퍼 ─────────────────────────────────────────────────────────
+
+def _validate_contact(v: str) -> str | None:
+    """연락처 검증. 문제 있으면 에러 메시지, 없으면 None."""
+    v = v.strip()
+    if not v:
+        return "연락처를 입력해 주세요."
+    if len(v) < 3:
+        return "연락처가 너무 짧습니다."
+    # 숫자로만 된 짧은 문자열 방지 (이름 같은 한글만 입력 방지)
+    if re.fullmatch(r'[가-힣\s]{1,4}', v):
+        return "올바른 연락처를 입력해 주세요. (전화번호 또는 카카오톡 ID)"
+    return None
+
+def _validate_payment_dest(v: str) -> str | None:
+    v = v.strip()
+    if not v:
+        return "송금처를 입력해 주세요."
+    if re.fullmatch(r'[가-힣\s]{1,4}', v):
+        return "올바른 계좌번호 또는 송금 수단을 입력해 주세요."
+    return None
+
+# ── 현재 위치 포함 지도 HTML ─────────────────────────────────────────────────
 
 def _map_view(lat, lng, name):
     return f"""<!DOCTYPE html><html><head>
@@ -34,11 +58,18 @@ var m=L.map('map').setView([{lat},{lng}],15);
 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
   {{attribution:'© OpenStreetMap'}}).addTo(m);
 L.marker([{lat},{lng}]).addTo(m).bindPopup('{name}').openPopup();
+// 현재 위치 표시
+if(navigator.geolocation){{
+  navigator.geolocation.getCurrentPosition(function(pos){{
+    var me=L.circleMarker([pos.coords.latitude,pos.coords.longitude],
+      {{radius:8,color:'#3B82F6',fillColor:'#93C5FD',fillOpacity:0.9}})
+      .addTo(m).bindPopup('📍 내 위치');
+  }});
+}}
 </script></body></html>"""
 
 
 def render_essentials_popup(item: dict):
-    """생필품 아이템 클릭 시 팝업"""
     st.markdown(CSS, unsafe_allow_html=True)
 
     label     = item.get("label", "")
@@ -55,7 +86,6 @@ def render_essentials_popup(item: dict):
 
     sub = st.session_state.ess_sub
 
-    # 닫기
     if st.button("✕ 닫기", key="ess_close"):
         st.session_state.modal_item   = None
         st.session_state.modal_type   = None
@@ -75,7 +105,7 @@ def render_essentials_popup(item: dict):
     st.markdown(f"### {label}")
     st.markdown("---")
 
-    # ── MAIN: 파티 목록 ───────────────────────────────────────────────────
+    # ── MAIN ─────────────────────────────────────────────────────────────
     if sub == "main":
         parties = get_open_parties(label)
 
@@ -91,6 +121,7 @@ def render_essentials_popup(item: dict):
             st.markdown("**📋 모집 중인 파티**")
             for p in parties:
                 cnt = len(p["applicants"])
+                already = any(a["user_id"] == uid for a in p["applicants"])
                 st.markdown(f"""
                 <div class="ess-party-card">
                   <b>파티 #{p['party_id'][:6]}</b>
@@ -100,12 +131,11 @@ def render_essentials_popup(item: dict):
                   </span>
                 </div>""", unsafe_allow_html=True)
 
-                already = any(a["user_id"] == uid for a in p["applicants"])
-
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("📝 신청하기", key=f"ess_apply_{p['party_id']}",
-                                 use_container_width=True, disabled=already or not is_logged):
+                                 use_container_width=True,
+                                 disabled=already or not is_logged):
                         st.session_state.ess_sub      = "apply"
                         st.session_state.ess_party_id = p["party_id"]
                         st.rerun()
@@ -120,32 +150,37 @@ def render_essentials_popup(item: dict):
                 if already:
                     st.success("✅ 신청 완료")
                     if st.button("신청 취소", key=f"ess_cancel_{p['party_id']}"):
-                        cancel_apply(p["party_id"], uid)
-                        st.rerun()
+                        cancel_apply(p["party_id"], uid); st.rerun()
 
-    # ── APPLY: 신청 폼 ────────────────────────────────────────────────────
+    # ── APPLY ─────────────────────────────────────────────────────────────
     elif sub == "apply":
         st.markdown("#### 📝 파티 신청")
-        with st.form("ess_apply_form"):
-            contact = st.text_input("연락처", placeholder="카카오톡 ID / 전화번호")
-            qty     = st.number_input("필요 개수", min_value=1, max_value=99, value=1, step=1)
-            ok      = st.form_submit_button("신청 완료", use_container_width=True)
 
-        if ok:
-            ok2, msg = apply_party(
-                st.session_state.ess_party_id, uid,
-                user.get("name",""), contact, int(qty))
-            if ok2:
-                push(uid, "pot_joined", f"'{label}' 생필품 파티에 신청됐습니다.")
-                st.success("신청 완료!")
-                st.session_state.ess_sub = "main"; st.rerun()
+        contact = st.text_input(
+            "연락처",
+            placeholder="카카오톡 ID 또는 010-0000-0000",
+            help="전화번호(010-xxxx-xxxx) 또는 카카오톡 ID를 입력하세요.")
+        qty = st.number_input("필요 개수", min_value=1, max_value=99, value=1, step=1)
+
+        if st.button("신청 완료", use_container_width=True, key="ess_apply_submit"):
+            err = _validate_contact(contact)
+            if err:
+                st.error(err)
             else:
-                st.error(msg)
+                ok2, msg = apply_party(
+                    st.session_state.ess_party_id, uid,
+                    user.get("name", ""), contact.strip(), int(qty))
+                if ok2:
+                    push(uid, "pot_joined", f"'{label}' 생필품 파티에 신청됐습니다.")
+                    st.success("신청 완료!")
+                    st.session_state.ess_sub = "main"; st.rerun()
+                else:
+                    st.error(msg)
 
         if st.button("← 뒤로", key="ess_back_apply"):
             st.session_state.ess_sub = "main"; st.rerun()
 
-    # ── ADMIN DETAIL: 신청자 목록 + 마감 ─────────────────────────────────
+    # ── ADMIN DETAIL ──────────────────────────────────────────────────────
     elif sub == "admin_detail":
         p = get_party(st.session_state.ess_party_id)
         if not p:
@@ -156,7 +191,6 @@ def render_essentials_popup(item: dict):
         st.markdown(f"#### 🔍 파티 상세 — #{p['party_id'][:6]}")
         applicants = p["applicants"]
         total_qty  = sum(a["qty"] for a in applicants)
-
         st.markdown(f"**총 신청자: {len(applicants)}명 / 총 수량: {total_qty}개**")
 
         for a in applicants:
@@ -170,22 +204,30 @@ def render_essentials_popup(item: dict):
         if p["status"] == "open":
             st.divider()
             st.markdown("**💰 파티 마감**")
-            with st.form("ess_close_form"):
-                price_per = st.number_input("개당 가격 (원)", min_value=0, step=100, value=1000)
-                pay_dest  = st.text_input("송금처 (계좌번호 / 카카오페이 등)")
-                close_ok  = st.form_submit_button("마감 처리", use_container_width=True)
 
-            if close_ok:
-                closed = close_party(p["party_id"], int(price_per), pay_dest)
-                if closed:
-                    for a in applicants:
-                        amount = a["qty"] * int(price_per)
-                        push(a["user_id"], "pot_ended",
-                             f"'{label}' 생필품 파티가 마감됐습니다. "
-                             f"총 {amount:,}원을 [{pay_dest}]로 보내주세요! "
-                             f"({a['qty']}개 × {int(price_per):,}원)")
-                    st.success("마감 처리 및 알림 발송 완료!")
-                    st.rerun()
+            price_per = st.number_input("개당 가격 (원)", min_value=0, step=100,
+                                         value=1000, key="ess_price_per")
+            pay_dest  = st.text_input("송금처",
+                                       placeholder="예: 국민은행 123-456-789 홍길동 / 카카오페이 010-0000-0000",
+                                       help="계좌번호(은행명 포함) 또는 카카오페이 번호를 입력하세요.",
+                                       key="ess_pay_dest")
+
+            if st.button("마감 처리", use_container_width=True, key="ess_close_submit"):
+                err = _validate_payment_dest(pay_dest)
+                if err:
+                    st.error(err)
+                elif price_per <= 0:
+                    st.error("개당 가격을 입력해 주세요.")
+                else:
+                    closed = close_party(p["party_id"], int(price_per), pay_dest.strip())
+                    if closed:
+                        for a in applicants:
+                            amount = a["qty"] * int(price_per)
+                            push(a["user_id"], "pot_ended",
+                                 f"'{label}' 생필품 파티가 마감됐습니다. "
+                                 f"총 {amount:,}원을 [{pay_dest.strip()}]로 보내주세요! "
+                                 f"({a['qty']}개 × {int(price_per):,}원)")
+                        st.success("마감 처리 및 알림 발송 완료!"); st.rerun()
         else:
             st.info(f"✅ 마감됨 | 개당 {p['price_per_unit']:,}원 | 송금처: {p['payment_dest']}")
 
