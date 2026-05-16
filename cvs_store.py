@@ -103,4 +103,3 @@ def delete_party(pid: str) -> bool:
         _w(d)
         return True
     return False
-    
