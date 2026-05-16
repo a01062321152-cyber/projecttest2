@@ -195,50 +195,34 @@ if(navigator.geolocation){
 </script></body></html>"""
 
 
-def _map_pick_with_coords(
-    key: str,
-    height: int = 390,
-    initial_lat: float = 37.5665,
-    initial_lng: float = 126.9780,
-) -> tuple[float, float]:
+def _map_pick_with_coords(key: str, height: int = 390) -> tuple[float, float]:
     """
     지도 클릭 → iframe 안 좌표 자동 반영 → '이 위치 선택' 버튼 클릭 → 자동 저장.
     session_state[key_lat], session_state[key_lng]에 좌표 보관.
     """
-
     lat_skey = f"_coord_lat_{key}"
     lng_skey = f"_coord_lng_{key}"
 
-    # 저장된 좌표 우선, 없으면 initial 값 사용
-    saved_lat = st.session_state.get(lat_skey, initial_lat)
-    saved_lng = st.session_state.get(lng_skey, initial_lng)
+    # 저장된 좌표 읽기 (최초엔 서울)
+    saved_lat = st.session_state.get(lat_skey, 37.5665)
+    saved_lng = st.session_state.get(lng_skey, 126.9780)
 
-    # query_params에서 새 좌표 읽기
+    # query_params에서 새 좌표 읽기 (지도 버튼 클릭 후)
     qp = st.query_params
     qk_lat, qk_lng = f"_qlat_{key}", f"_qlng_{key}"
-
     if qk_lat in qp and qk_lng in qp:
         try:
             saved_lat = float(qp[qk_lat])
             saved_lng = float(qp[qk_lng])
-
             st.session_state[lat_skey] = saved_lat
             st.session_state[lng_skey] = saved_lng
-
         except Exception:
             pass
-
+        # 파라미터 제거
         st.query_params.clear()
 
-    has_pin = (
-        abs(saved_lat - 37.5665) > 0.00001
-        or abs(saved_lng - 126.9780) > 0.00001
-    )
-
-    pin_js = (
-        f"setPin({saved_lat},{saved_lng});"
-        if has_pin else ""
-    )
+    has_pin = abs(saved_lat - 37.5665) > 0.00001 or abs(saved_lng - 126.9780) > 0.00001
+    pin_js  = f"setPin({saved_lat},{saved_lng});" if has_pin else ""
 
     html = f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -249,97 +233,104 @@ def _map_pick_with_coords(
 body{{font-family:sans-serif;background:transparent;}}
 #map{{width:100%;height:{height-100}px;}}
 #bar{{display:flex;align-items:center;gap:6px;padding:8px 10px;
-background:#F8FAFC;border:1.5px solid #E5E7EB;border-top:none;
-border-radius:0 0 12px 12px;flex-wrap:wrap;}}
+  background:#F8FAFC;border:1.5px solid #E5E7EB;border-top:none;
+  border-radius:0 0 12px 12px;flex-wrap:wrap;}}
 .lbl{{font-size:.72rem;font-weight:600;color:#6B7280;white-space:nowrap;}}
 .coord{{flex:1;min-width:90px;border:1.5px solid #DBEAFE;border-radius:8px;
-padding:5px 7px;font-size:.82rem;color:#1a1a1a;background:#fff;
-outline:none;font-weight:600;}}
+  padding:5px 7px;font-size:.82rem;color:#1a1a1a;background:#fff;
+  outline:none;font-weight:600;}}
 #sel-btn{{background:#10B981;color:#fff;border:none;border-radius:8px;
-padding:6px 12px;font-size:.75rem;font-weight:700;cursor:pointer;}}
+  padding:6px 12px;font-size:.75rem;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:background .15s;}}
+#sel-btn:hover{{background:#059669;}}
+#sel-btn:disabled{{background:#9CA3AF;cursor:default;}}
 #cur-btn{{background:#3B82F6;color:#fff;border:none;border-radius:8px;
-padding:6px 10px;font-size:.73rem;font-weight:600;cursor:pointer;}}
-#info{{position:absolute;bottom:104px;left:50%;
-transform:translateX(-50%);
-background:rgba(0,0,0,.65);color:#fff;font-size:.72rem;
-padding:3px 12px;border-radius:20px;z-index:999;}}
+  padding:6px 10px;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;}}
+#cur-btn:hover{{background:#2563EB;}}
+#info{{position:absolute;bottom:104px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);color:#fff;font-size:.72rem;
+  padding:3px 12px;border-radius:20px;z-index:999;
+  white-space:nowrap;pointer-events:none;}}
 #wrap{{position:relative;}}
 </style></head><body>
-
 <div id="wrap">
-<div id="map"></div>
-<div id="info">지도를 클릭해 위치를 선택하세요</div>
+  <div id="map"></div>
+  <div id="info">지도를 클릭해 위치를 선택하세요</div>
 </div>
-
 <div id="bar">
-<span class="lbl">위도</span>
-<input class="coord" id="lat-v" readonly>
-
-<span class="lbl">경도</span>
-<input class="coord" id="lng-v" readonly>
-
-<button id="cur-btn" onclick="goMe()">📍 내 위치</button>
-<button id="sel-btn" disabled onclick="confirm()">✅ 이 위치 선택</button>
+  <span class="lbl">위도</span>
+  <input class="coord" id="lat-v" readonly placeholder="--"/>
+  <span class="lbl">경도</span>
+  <input class="coord" id="lng-v" readonly placeholder="--"/>
+  <button id="cur-btn" onclick="goMe()">📍 내 위치</button>
+  <button id="sel-btn" disabled onclick="confirm()">✅ 이 위치 선택</button>
 </div>
-
 <script>
 var map=L.map('map').setView([{saved_lat},{saved_lng}],14);
-
-L.tileLayer(
-'https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
-{{attribution:'© OpenStreetMap'}}
-).addTo(map);
-
-var mk=null,myMk=null,selLat=null,selLng=null;
+L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
+  {{attribution:'© OpenStreetMap'}}).addTo(map);
+var mk=null, myMk=null, selLat=null, selLng=null;
 
 function setPin(la,lo){{
-if(mk) map.removeLayer(mk);
-mk=L.marker([la,lo]).addTo(map);
-
-selLat=la;
-selLng=lo;
-
-document.getElementById('lat-v').value=la.toFixed(5);
-document.getElementById('lng-v').value=lo.toFixed(5);
-
-document.getElementById('info').innerText=
-'📍 '+la.toFixed(5)+', '+lo.toFixed(5);
-
-document.getElementById('sel-btn').disabled=false;
+  if(mk) map.removeLayer(mk); mk=L.marker([la,lo]).addTo(map);
+  selLat=la; selLng=lo;
+  document.getElementById('lat-v').value=la.toFixed(5);
+  document.getElementById('lng-v').value=lo.toFixed(5);
+  document.getElementById('info').innerText='📍 '+la.toFixed(5)+', '+lo.toFixed(5);
+  document.getElementById('sel-btn').disabled=false;
 }}
 
-map.on('click',function(e){{
-setPin(e.latlng.lat,e.latlng.lng);
-}});
+map.on('click',function(e){{ setPin(e.latlng.lat,e.latlng.lng); }});
 
 function confirm(){{
-if(selLat===null) return;
-
-var u=new URL(window.parent.location.href);
-
-u.searchParams.set('{qk_lat}',selLat.toFixed(5));
-u.searchParams.set('{qk_lng}',selLng.toFixed(5));
-
-window.parent.location.href=u.toString();
+  if(selLat===null) return;
+  // query_params로 Streamlit에 전달 후 rerun 유도
+  var u=new URL(window.parent.location.href);
+  u.searchParams.set('{qk_lat}',selLat.toFixed(5));
+  u.searchParams.set('{qk_lng}',selLng.toFixed(5));
+  window.parent.location.href=u.toString();
 }}
 
 function goMe(){{
-navigator.geolocation.getCurrentPosition(function(pos){{
-var la=pos.coords.latitude;
-var lo=pos.coords.longitude;
-
-map.setView([la,lo],16);
-setPin(la,lo);
-}});
+  if(!navigator.geolocation){{alert('위치 권한이 없습니다.');return;}}
+  navigator.geolocation.getCurrentPosition(function(pos){{
+    var la=pos.coords.latitude,lo=pos.coords.longitude;
+    map.setView([la,lo],16);
+    if(myMk) map.removeLayer(myMk);
+    myMk=L.circleMarker([la,lo],{{radius:8,color:'#3B82F6',fillColor:'#93C5FD',fillOpacity:.9}})
+      .addTo(map).bindPopup('📍 내 위치').openPopup();
+    setPin(la,lo);
+  }},function(){{alert('위치를 가져올 수 없습니다.');}});
 }}
 
-{pin_js}
+// 현재 위치로 초기 이동 (핀 없을 때)
+if(!{str(has_pin).lower()}){{
+  navigator.geolocation&&navigator.geolocation.getCurrentPosition(function(pos){{
+    map.setView([pos.coords.latitude,pos.coords.longitude],15);
+    myMk=L.circleMarker([pos.coords.latitude,pos.coords.longitude],
+      {{radius:8,color:'#3B82F6',fillColor:'#93C5FD',fillOpacity:.9}}).addTo(map);
+  }});
+}}
 
+// 이미 저장된 핀 복원
+{pin_js}
 </script></body></html>"""
 
     components.html(html, height=height, scrolling=False)
 
+    # 선택된 좌표 표시
+    if has_pin:
+        st.markdown(
+            f'<div style="font-size:.8rem;color:#16A34A;background:#DCFCE7;'
+            f'padding:5px 12px;border-radius:8px;margin-top:4px;">'
+            f'✅ 선택된 위치: 위도 <b>{saved_lat:.5f}</b> / 경도 <b>{saved_lng:.5f}</b></div>',
+            unsafe_allow_html=True)
+    else:
+        st.caption("지도를 클릭한 후 ✅ 이 위치 선택 버튼을 눌러주세요.")
+
     return saved_lat, saved_lng
+
+
 def _map_view_inline(lat, lng, name):
     return f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -470,18 +461,7 @@ def render_wishlist_page():
 
                 st.markdown("**📍 방문할 편의점 위치**")
                 st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다. 위치 이름도 입력해 주세요.")
-                visit_lat, visit_lng = _map_pick_with_coords(
-    "cvs_visit",
-    height=390,
-    initial_lat=st.session_state.get(
-        "_coord_lat_cvs_visit",
-        37.5665
-    ),
-    initial_lng=st.session_state.get(
-        "_coord_lng_cvs_visit",
-        126.9780
-    ),
-)
+                visit_lat, visit_lng = _map_pick_with_coords("cvs_visit", height=390)
                 visit_loc = st.text_input("편의점 이름/위치 설명",
                                           placeholder="예: GS25 역삼점",
                                           key="cvs_visit_loc")
@@ -589,16 +569,8 @@ def render_wishlist_page():
                                     placeholder="예: 편의점 앞 공원 벤치",
                                 )
                                 st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다.")
-                               gather_lat, gather_lng = _map_pick_with_coords(
-    f"gather_{p['party_id']}",
-    height=390,
-    initial_lat=float(
-        p.get("gather_lat", 37.5665)
-    ),
-    initial_lng=float(
-        p.get("gather_lng", 126.9780)
-    ),
-)
+                                gather_lat, gather_lng = _map_pick_with_coords(
+                                    f"gather_{p['party_id']}", height=390)
 
                                 if st.button("📍 위치 전송",
                                              key=f"cvs_gather_{p['party_id']}",
