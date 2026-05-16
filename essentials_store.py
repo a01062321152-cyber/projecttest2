@@ -18,40 +18,49 @@ def _w(d):
 def create_party(item_label: str, item_image: str, admin_id: str) -> str:
     d = _r()
     pid = str(uuid.uuid4())[:8]
+    from datetime import timedelta
+    deadline = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
     d[pid] = {
         "party_id": pid,
         "item_label": item_label,
         "item_image": item_image,
         "admin_id": admin_id,
-        "status": "open",       # open | closed | rated
-        "applicants": [],       # [{user_id, name, contact, qty}]
+        "status": "open",
+        "applicants": [],
         "price_per_unit": 0,
         "payment_dest": "",
-        "ratings": {},          # {user_id: score(1~5)}
-        "credits_given": [],    # 크래딧 지급된 user_id 목록
+        "deadline": deadline,
+        "ratings": {},
+        "credits_given": [],
         "created_at": datetime.now().isoformat(),
     }
     _w(d)
     return pid
 
 # ── 조회 ─────────────────────────────────────────────────────────────────────
+def _migrate(p: dict) -> dict:
+    p.setdefault("ratings", {})
+    p.setdefault("credits_given", [])
+    if "deadline" not in p:
+        # 기존 파티는 생성일 기준 7일 후
+        try:
+            from datetime import timedelta
+            created = datetime.fromisoformat(p["created_at"])
+            p["deadline"] = (created + timedelta(days=7)).strftime("%Y-%m-%d")
+        except Exception:
+            p["deadline"] = ""
+    return p
+
 def get_open_parties(item_label: str) -> list:
-    return [p for p in _r().values()
+    return [_migrate(p) for p in _r().values()
             if p["item_label"] == item_label and p["status"] == "open"]
 
 def get_party(pid: str) -> dict | None:
     p = _r().get(pid)
-    if p:
-        p.setdefault("ratings", {})
-        p.setdefault("credits_given", [])
-    return p
+    return _migrate(p) if p else None
 
 def get_all_parties() -> list:
-    d = _r()
-    for p in d.values():
-        p.setdefault("ratings", {})
-        p.setdefault("credits_given", [])
-    return list(d.values())
+    return [_migrate(p) for p in _r().values()]
 
 # ── 신청 ─────────────────────────────────────────────────────────────────────
 def apply_party(pid: str, user_id: str, name: str,
