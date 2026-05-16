@@ -99,5 +99,19 @@ def remove_item(rid, owner_id):
         return True
     return False
 
+def admin_remove_item(rid: str) -> bool:
+    """관리자 강제 삭제"""
+    d    = _r()
+    item = d.get(rid)
+    if item:
+        item["status"] = "removed"
+        _w(d)
+        return True
+    return False
+
+def get_all_items() -> list:
+    """관리자용: 전체 상품 목록"""
+    return list(_r().values())
+
 def has_spun(rid, user_id):
     return rid in _rl().get(user_id, [])
