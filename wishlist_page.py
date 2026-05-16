@@ -54,14 +54,22 @@ def image_url_input(label: str, key: str,
         st.error(err)
     elif url.strip() and not err:
         st.markdown(
-            f'<div style="font-size:.75rem;color:#16A34A;">✅ 유효한 이미지 URL</div>',
+            f'<div style="font-size:.75rem;color:#2563EB;">✅ 유효한 이미지 URL</div>',
             unsafe_allow_html=True)
     return url.strip(), err
 
 CSS = """
 <style>
-.tab-section-title{font-size:1.1rem;font-weight:700;color:#1a1a1a;
-  margin-bottom:1rem;border-bottom:2px solid #E5E7EB;padding-bottom:.5rem;}
+.tab-section-title{font-size:1.1rem;font-weight:700;color:#1D4ED8;
+  margin-bottom:1rem;border-bottom:2px solid #DBEAFE;padding-bottom:.6rem;}
+.roulette-item-card{background:#FFFFFF;border:1.5px solid #BFDBFE;
+  border-radius:14px;padding:1rem 1.2rem;margin-bottom:.8rem;
+  box-shadow:0 2px 8px rgba(37,99,235,.06);transition:all .15s;}
+.roulette-item-card:hover{border-color:#2563EB;background:#EFF6FF;}
+.admin-item-row{background:#F8FBFF;border:1.5px solid #BFDBFE;
+  border-radius:12px;padding:.7rem 1rem;margin-bottom:.6rem;
+  transition:all .15s;}
+.admin-item-row:hover{border-color:#2563EB;background:#EFF6FF;}
 </style>
 """
 
@@ -144,7 +152,7 @@ body{{background:transparent;display:flex;flex-direction:column;
 canvas{{border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,.2);}}
 #ptr{{position:absolute;top:-20px;left:50%;transform:translateX(-50%);
   font-size:2rem;line-height:1;}}
-#msg{{margin-top:12px;font-size:1rem;font-weight:700;color:#1a1a1a;
+#msg{{margin-top:12px;font-size:1rem;font-weight:700;color:#0F172A;
   text-align:center;min-height:24px;}}
 </style></head><body>
 <div id="wrap">
@@ -163,20 +171,20 @@ var WIN_LABELS = ['🎁 당첨','🥳 당첨','🎉 당첨','✨ 당첨','🏆 �
                   '💰 당첨','🎊 당첨','⭐ 당첨','🌟 당첨','💎 당첨',
                   '🎁 당첨','🥳 당첨','🎉 당첨','✨ 당첨','🏆 당첨',
                   '💰 당첨','🎊 당첨','⭐ 당첨','🌟 당첨','💎 당첨'];
-var WIN_COLS   = ['#F59E0B','#FBBF24','#F59E0B','#D97706','#FBBF24',
-                  '#F59E0B','#FBBF24','#D97706','#F59E0B','#FBBF24',
-                  '#D97706','#F59E0B','#FBBF24','#F59E0B','#D97706',
-                  '#FBBF24','#F59E0B','#D97706','#FBBF24','#F59E0B'];
+var WIN_COLS   = ['#F59E0B','#FBBF24','#F59E0B','#B45309','#FBBF24',
+                  '#F59E0B','#FBBF24','#B45309','#F59E0B','#FBBF24',
+                  '#B45309','#F59E0B','#FBBF24','#F59E0B','#B45309',
+                  '#FBBF24','#F59E0B','#B45309','#FBBF24','#F59E0B'];
 
 // 꽝: 전 칸 꽝 이모지 + 회색/빨강
 var LOSE_LABELS = ['😢 꽝','💀 꽝','😅 꽝','🥲 꽝','😵 꽝',
                    '🤦 꽝','😭 꽝','🙈 꽝','😤 꽝','🫠 꽝',
                    '🤡 꽝','😾 꽝','😩 꽝','🤯 꽝','😬 꽝',
                    '🥴 꽝','🫥 꽝','🫣 꽝','😱 꽝','💔 꽝'];
-var LOSE_COLS   = ['#EF4444','#6B7280','#EF4444','#9CA3AF','#EF4444',
-                   '#6B7280','#EF4444','#9CA3AF','#EF4444','#6B7280',
-                   '#EF4444','#9CA3AF','#EF4444','#6B7280','#EF4444',
-                   '#9CA3AF','#EF4444','#6B7280','#9CA3AF','#EF4444'];
+var LOSE_COLS   = ['#EF4444','#64748B','#EF4444','#94A3B8','#EF4444',
+                   '#64748B','#EF4444','#94A3B8','#EF4444','#64748B',
+                   '#EF4444','#94A3B8','#EF4444','#64748B','#EF4444',
+                   '#94A3B8','#EF4444','#64748B','#94A3B8','#EF4444'];
 
 var LABELS = isWin ? WIN_LABELS : LOSE_LABELS;
 var COLS   = isWin ? WIN_COLS   : LOSE_COLS;
@@ -213,11 +221,11 @@ function draw(angle){{
   }}
   // 중심원
   ctx.beginPath(); ctx.arc(cx,cy,22,0,2*Math.PI);
-  ctx.fillStyle = isWin ? '#FEF3C7' : '#F3F4F6';
+  ctx.fillStyle = isWin ? '#FEF9C3' : '#EFF6FF';
   ctx.fill();
-  ctx.strokeStyle='#E5E7EB'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='#BFDBFE'; ctx.lineWidth=2; ctx.stroke();
   ctx.font='14px sans-serif'; ctx.textAlign='center';
-  ctx.fillStyle='#1a1a1a';
+  ctx.fillStyle='#0F172A';
   ctx.fillText(isWin ? '🎁' : '😢', cx, cy+5);
 }}
 
@@ -304,14 +312,14 @@ def render_wishlist_page():
                         except Exception:
                             st.markdown(
                                 '<div style="width:80px;height:80px;border-radius:10px;'
-                                'background:linear-gradient(135deg,#EEF4FF,#DBEAFE);'
+                                'background:linear-gradient(135deg,#EFF6FF,#DBEAFE);'
                                 'display:flex;align-items:center;justify-content:center;'
                                 'font-size:2rem;">🎁</div>',
                                 unsafe_allow_html=True)
                     else:
                         st.markdown(
                             '<div style="width:80px;height:80px;border-radius:10px;'
-                            'background:linear-gradient(135deg,#EEF4FF,#DBEAFE);'
+                            'background:linear-gradient(135deg,#EFF6FF,#DBEAFE);'
                             'display:flex;align-items:center;justify-content:center;'
                             'font-size:2rem;">🎁</div>',
                             unsafe_allow_html=True)
