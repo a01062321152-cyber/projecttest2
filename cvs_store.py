@@ -16,9 +16,7 @@ def _w(d):
 
 # ── 파티 생성 (유저) ─────────────────────────────────────────────────────────
 def create_party(creator_id: str, creator_name: str,
-                 depart_time: str, contact: str, account: str,
-                 visit_location: str = "", visit_lat: float = 0.0,
-                 visit_lng: float = 0.0) -> str:
+                 depart_time: str, contact: str, account: str) -> str:
     d = _r()
     pid = str(uuid.uuid4())[:8]
     d[pid] = {
@@ -28,35 +26,21 @@ def create_party(creator_id: str, creator_name: str,
         "depart_time": depart_time,
         "contact": contact,
         "account": account,
-        "visit_location": visit_location,   # 방문할 편의점 위치
-        "visit_lat": visit_lat,
-        "visit_lng": visit_lng,
         "status": "waiting",
         "orders": [],
-        "gather_location": "",
-        "gather_lat": 0.0,
-        "gather_lng": 0.0,
         "created_at": datetime.now().isoformat(),
     }
     _w(d)
     return pid
 
 # ── 조회 ─────────────────────────────────────────────────────────────────────
-def _migrate(p: dict) -> dict:
-    """기존 파티 데이터에 visit 필드 없으면 기본값 추가"""
-    p.setdefault("visit_location", "")
-    p.setdefault("visit_lat", 0.0)
-    p.setdefault("visit_lng", 0.0)
-    return p
-
 def get_waiting_parties() -> list:
     d = _r()
-    result = [_migrate(p) for p in d.values() if p["status"] == "waiting"]
+    result = [p for p in d.values() if p["status"] == "waiting"]
     return sorted(result, key=lambda x: x["depart_time"])
 
 def get_party(pid: str) -> dict | None:
-    p = _r().get(pid)
-    return _migrate(p) if p else None
+    return _r().get(pid)
 
 def get_parties_by_user(user_id: str) -> list:
     """내가 파티장이거나 주문자인 파티"""
@@ -112,18 +96,6 @@ def depart_party(pid: str) -> bool:
         return True
     return False
 
-# ── 집합 위치 전송 ────────────────────────────────────────────────────────────
-def set_gather_location(pid: str, location: str, lat: float, lng: float) -> bool:
-    d = _r()
-    p = d.get(pid)
-    if not p: return False
-    p["gather_location"] = location
-    p["gather_lat"] = lat
-    p["gather_lng"] = lng
-    p["status"] = "arrived"
-    _w(d)
-    return True
-
 def delete_party(pid: str) -> bool:
     d = _r()
     if pid in d:
@@ -131,3 +103,4 @@ def delete_party(pid: str) -> bool:
         _w(d)
         return True
     return False
+    
