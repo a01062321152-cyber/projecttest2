@@ -106,8 +106,8 @@ with h2:
 # ── 알림 패널 ─────────────────────────────────────────────────────────────────
 if st.session_state.show_notif and is_logged:
     notifs = get_notifications(uid)
-    type_icon = {"item_added":"🆕","item_deleted":"🗑️","item_price_changed":"💰",
-                 "pot_joined":"🛒","pot_ended":"✅","pot_disbanded":"💔"}
+    type_icon = {"item_added":"🆕 신규 등록","item_deleted":"🗑️ 삭제","item_price_changed":"💰 가격 변경",
+                 "pot_joined":"🛒 파티","pot_ended":"✅ 완료","pot_disbanded":"💔 해산"}
     st.markdown('<div class="notif-panel">', unsafe_allow_html=True)
     st.markdown("**🔔 알림**")
     if not notifs:
@@ -130,14 +130,14 @@ if st.session_state.show_notif and is_logged:
 
 # ── 카드 섹션 ─────────────────────────────────────────────────────────────────
 def render_card_section(title: str, items: list, list_key: str, list_type: str):
-    badge_cls  = "badge-essentials" if list_type=="essentials" else "badge-cvs"
-    badge_txt  = "생필품" if list_type=="essentials" else "편의점"
-    btn_label  = "🧴 구메 신청" if list_type=="essentials" else "🏪 파티 찾기"
+    badge_cls  = "badge-essentials"
+    badge_txt  = ""
+    btn_label  = "🧴 공동구매 신청"
 
     st.markdown(
         f'<p style="font-size:1rem;font-weight:600;color:#1a1a1a;'
         f'letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem;">'
-        f'{title} <span class="list-type-badge {badge_cls}">{badge_txt}</span></p>',
+        f'{title}</p>',
         unsafe_allow_html=True)
 
     n = len(items)
@@ -267,7 +267,6 @@ if st.session_state.modal_item is not None:
     if mtype == "essentials":
         render_essentials_popup(st.session_state.modal_item)
     else:
-        # 구버전 cvs 타입 항목도 essentials 팝업으로 처리
         render_essentials_popup(st.session_state.modal_item)
 
 else:
@@ -309,7 +308,7 @@ else:
 # ── 하단 네비게이션 ───────────────────────────────────────────────────────────
 nc1,nc2,nc3 = st.columns(3)
 with nc1:
-    if st.button("🏪", key="nav_wish", help="편의점파티·룰렛", use_container_width=True):
+    if st.button("🎰", key="nav_wish", help="룰렛", use_container_width=True):
         st.session_state.modal_item=None; st.session_state.page="wishlist"; st.rerun()
 with nc2:
     if st.button("🏠", key="nav_home", help="홈", use_container_width=True):
