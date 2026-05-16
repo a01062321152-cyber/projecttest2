@@ -26,55 +26,128 @@ for k, v in [("page","main"),("modal_item",None),("modal_type",None),
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
-html,body,[data-testid="stAppViewContainer"]{background:#F7F5F0;font-family:'DM Sans',sans-serif;}
-[data-testid="stHeader"]{display:none;}[data-testid="stSidebar"]{display:none;}
+
+/* ── 기본 배경 ── */
+html,body,[data-testid="stAppViewContainer"]{
+  background:#F0F4FF;font-family:'DM Sans',sans-serif;color:#0F172A;}
+[data-testid="stHeader"]{display:none;}
+[data-testid="stSidebar"]{display:none;}
 .main .block-container{max-width:1100px;padding:0 2rem 6rem 2rem;margin:0 auto;}
+
+/* ── 상단 헤더 ── */
 .top-header{display:flex;align-items:center;justify-content:space-between;
-  padding:1.6rem 0 1.2rem 0;border-bottom:2px solid #1a1a1a;margin-bottom:2.4rem;}
-.logo-text{font-family:'DM Serif Display',serif;font-size:2rem;color:#1a1a1a;}
+  padding:1.6rem 0 1.2rem 0;
+  border-bottom:2px solid #2563EB;margin-bottom:2.4rem;
+  background:transparent;}
+.logo-text{font-family:'DM Serif Display',serif;font-size:2rem;
+  color:#2563EB;letter-spacing:-.02em;}
+
+/* ── 배지 ── */
 .list-type-badge{display:inline-block;font-size:.7rem;font-weight:700;
   padding:.15rem .55rem;border-radius:20px;margin-left:.5rem;vertical-align:middle;}
-.badge-essentials{background:#DCFCE7;color:#16A34A;}
-.badge-cvs{background:#FEF3C7;color:#D97706;}
-.notif-panel{background:#fff;border:1.5px solid #E5E7EB;border-radius:16px;
-  padding:1rem 1.2rem;margin-bottom:1.2rem;box-shadow:0 8px 32px rgba(0,0,0,.12);}
-.notif-item{padding:.6rem 0;border-bottom:1px solid #F3F4F6;font-size:.83rem;color:#374151;}
+.badge-essentials{background:#DBEAFE;color:#1D4ED8;}
+
+/* ── 알림 패널 ── */
+.notif-panel{background:#FFFFFF;border:1.5px solid #BFDBFE;border-radius:16px;
+  padding:1rem 1.2rem;margin-bottom:1.2rem;
+  box-shadow:0 8px 32px rgba(37,99,235,.08);}
+.notif-item{padding:.6rem 0;border-bottom:1px solid #EFF6FF;
+  font-size:.83rem;color:#1E3A5F;}
 .notif-item:last-child{border-bottom:none;}
-.notif-time{font-size:.7rem;color:#9CA3AF;margin-top:.15rem;}
-/* 카드 이미지 래퍼 */
-.card-img-wrap{width:100%;aspect-ratio:4/3;border-radius:12px 12px 0 0;overflow:hidden;
-  position:relative;border:2px solid #3B82F6;border-bottom:none;
-  background:linear-gradient(135deg,#EEF4FF,#DBEAFE);}
+.notif-time{font-size:.7rem;color:#94A3B8;margin-top:.15rem;}
+
+/* ── 카드 ── */
+.card-img-wrap{width:100%;aspect-ratio:4/3;
+  border-radius:12px 12px 0 0;overflow:hidden;position:relative;
+  border:2px solid #BFDBFE;border-bottom:none;
+  background:linear-gradient(135deg,#EFF6FF,#DBEAFE);}
 .card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
 .card-img-placeholder{width:100%;height:100%;
   display:flex;align-items:center;justify-content:center;font-size:2.5rem;}
 .card-price-tag{position:absolute;top:8px;right:8px;font-size:.68rem;font-weight:700;
-  color:#fff;background:rgba(59,130,246,.88);padding:.15rem .55rem;border-radius:20px;}
-/* 버튼 카드 하단 스타일 */
+  color:#fff;background:#2563EB;padding:.15rem .55rem;border-radius:20px;}
+
+/* ── 카드 하단 버튼 ── */
 div[data-card-btn] > div > button{
-  border-radius:0 0 12px 12px !important;border:2px solid #3B82F6 !important;
-  border-top:none !important;background:#fff !important;color:#3B82F6 !important;
+  border-radius:0 0 12px 12px !important;
+  border:2px solid #BFDBFE !important;border-top:none !important;
+  background:#FFFFFF !important;color:#2563EB !important;
   font-weight:600 !important;font-size:.82rem !important;
-  padding:.55rem .5rem !important;transition:background .15s !important;}
-div[data-card-btn] > div > button:hover{background:#EFF6FF !important;}
-/* 하단 네비바 */
+  padding:.55rem .5rem !important;transition:all .15s !important;}
+div[data-card-btn] > div > button:hover{
+  background:#EFF6FF !important;border-color:#2563EB !important;}
+
+/* ── Streamlit 기본 요소 화이트/블루 통일 ── */
+div[data-testid="stTextInput"] input,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stSelectbox"] select,
+textarea{
+  background:#FFFFFF !important;
+  border:1.5px solid #BFDBFE !important;
+  border-radius:8px !important;
+  color:#0F172A !important;}
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stNumberInput"] input:focus,
+textarea:focus{
+  border-color:#2563EB !important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12) !important;}
+
+/* 버튼 전체 스타일 */
+div[data-testid="stButton"] > button{
+  background:#FFFFFF !important;
+  border:1.5px solid #BFDBFE !important;
+  color:#2563EB !important;
+  border-radius:10px !important;
+  font-weight:600 !important;
+  transition:all .15s !important;}
+div[data-testid="stButton"] > button:hover{
+  background:#EFF6FF !important;
+  border-color:#2563EB !important;}
+div[data-testid="stButton"] > button[kind="primary"]{
+  background:#2563EB !important;
+  border-color:#2563EB !important;
+  color:#FFFFFF !important;}
+div[data-testid="stButton"] > button[kind="primary"]:hover{
+  background:#1D4ED8 !important;}
+
+/* expander */
+div[data-testid="stExpander"]{
+  border:1.5px solid #BFDBFE !important;
+  border-radius:12px !important;
+  background:#FFFFFF !important;}
+
+/* info/success/warning/error 박스 */
+div[data-testid="stAlert"]{border-radius:10px !important;}
+
+/* 탭 */
+button[data-baseweb="tab"]{
+  color:#64748B !important;font-weight:600 !important;}
+button[data-baseweb="tab"][aria-selected="true"]{
+  color:#2563EB !important;
+  border-bottom:2px solid #2563EB !important;}
+
+/* ── 하단 네비바 ── */
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"]{
   position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;
   width:100% !important;max-width:100% !important;
   padding:0 !important;margin:0 !important;gap:0 !important;
-  background:#ffffff !important;border-top:1px solid #E5E7EB !important;
-  box-shadow:0 -4px 20px rgba(0,0,0,.06) !important;
-  z-index:9999 !important;display:flex !important;align-items:stretch !important;height:64px !important;}
+  background:#FFFFFF !important;
+  border-top:2px solid #DBEAFE !important;
+  box-shadow:0 -4px 20px rgba(37,99,235,.08) !important;
+  z-index:9999 !important;display:flex !important;
+  align-items:stretch !important;height:64px !important;}
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"]
   > div[data-testid="stColumn"]{flex:1 !important;padding:0 !important;min-width:0 !important;}
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"] button{
-  width:100% !important;height:64px !important;background:transparent !important;
-  border:none !important;border-radius:0 !important;box-shadow:none !important;
-  font-size:1.5rem !important;cursor:pointer !important;transition:background .2s !important;
-  color:#6B7280 !important;padding:0 !important;
+  width:100% !important;height:64px !important;
+  background:transparent !important;border:none !important;
+  border-radius:0 !important;box-shadow:none !important;
+  font-size:1.5rem !important;cursor:pointer !important;
+  transition:background .2s !important;
+  color:#94A3B8 !important;padding:0 !important;
   display:flex !important;align-items:center !important;justify-content:center !important;}
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"]
-  button:hover{background:#EFF6FF !important;color:#3B82F6 !important;}
+  button:hover{background:#EFF6FF !important;color:#2563EB !important;}
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"]
   button p{display:none !important;}
 section.main > div.block-container > div:last-child > div[data-testid="stHorizontalBlock"]
@@ -135,7 +208,7 @@ def render_card_section(title: str, items: list, list_key: str, list_type: str):
     btn_label  = "🧴 공동구매 신청"
 
     st.markdown(
-        f'<p style="font-size:1rem;font-weight:600;color:#1a1a1a;'
+        f'<p style="font-size:1rem;font-weight:600;color:#0F172A;'
         f'letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem;">'
         f'{title}</p>',
         unsafe_allow_html=True)
@@ -186,7 +259,7 @@ def render_card_section(title: str, items: list, list_key: str, list_type: str):
 # ── 관리자 편집 패널 ──────────────────────────────────────────────────────────
 def render_admin_editor(list_key: str, info: dict):
     with st.expander(f"⚙️ [{info.get('title',list_key)}] 편집", expanded=False):
-        st.markdown('<p style="font-size:.72rem;font-weight:700;color:#D97706;'
+        st.markdown('<p style="font-size:.72rem;font-weight:700;color:#B45309;'
                     'letter-spacing:.08em;text-transform:uppercase;">🛡️ 관리자 편집</p>',
                     unsafe_allow_html=True)
 
