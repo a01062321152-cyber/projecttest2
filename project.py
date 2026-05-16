@@ -1,9 +1,18 @@
+"""
+project.py
+──────────
+메인 앱 진입점.
+auth.py  : 로그인 / 회원가입 / 마이페이지 UI
+user_store.py : 유저 데이터 저장·조회
+"""
+
 import streamlit as st
 import streamlit.components.v1 as components
+from auth import render_auth_page, render_my_page
 
 # ── 페이지 설정 ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Main Page",
+    page_title="My App",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -44,75 +53,47 @@ html, body, [data-testid="stAppViewContainer"] {
     color: #1a1a1a;
 }
 
-/* ── 하단 네비바 컨테이너 ── */
-/* Streamlit이 생성하는 버튼 3개를 감싸는 row를 고정 바로 만들기 */
+/* ── 하단 네비바 (Streamlit 마지막 columns 블록을 고정) ── */
 section.main > div.block-container > div:last-child
   > div[data-testid="stHorizontalBlock"] {
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    width: 100% !important; max-width: 100% !important;
+    padding: 0 !important; margin: 0 !important; gap: 0 !important;
     background: #ffffff !important;
     border-top: 1px solid #E5E7EB !important;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.06) !important;
     z-index: 9999 !important;
-    display: flex !important;
-    align-items: stretch !important;
-    gap: 0 !important;
+    display: flex !important; align-items: stretch !important;
     height: 64px !important;
 }
-
-/* 각 column */
 section.main > div.block-container > div:last-child
   > div[data-testid="stHorizontalBlock"]
   > div[data-testid="stColumn"] {
-    flex: 1 !important;
-    padding: 0 !important;
-    min-width: 0 !important;
+    flex: 1 !important; padding: 0 !important; min-width: 0 !important;
 }
-
-/* 버튼 base */
 section.main > div.block-container > div:last-child
-  > div[data-testid="stHorizontalBlock"]
-  button {
-    width: 100% !important;
-    height: 64px !important;
+  > div[data-testid="stHorizontalBlock"] button {
+    width: 100% !important; height: 64px !important;
     background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
+    border: none !important; border-radius: 0 !important;
     box-shadow: none !important;
     font-size: 1.5rem !important;
-    line-height: 1 !important;
     cursor: pointer !important;
     transition: background 0.2s ease !important;
     color: #6B7280 !important;
     padding: 0 !important;
-    /* 텍스트(레이블) 숨기기 — 이모지만 표시 */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
 }
 section.main > div.block-container > div:last-child
-  > div[data-testid="stHorizontalBlock"]
-  button:hover {
+  > div[data-testid="stHorizontalBlock"] button:hover {
     background: #EFF6FF !important;
     color: #3B82F6 !important;
 }
-
-/* stMarkdown 툴팁 wrapper는 사용 안 하므로 숨김 */
 section.main > div.block-container > div:last-child
-  > div[data-testid="stHorizontalBlock"]
-  .stElementContainer { padding: 0 !important; }
-
-/* 버튼 p 태그 (레이블 텍스트) 숨기기 */
+  > div[data-testid="stHorizontalBlock"] button p { display: none !important; }
 section.main > div.block-container > div:last-child
-  > div[data-testid="stHorizontalBlock"]
-  button p { display: none !important; }
-
+  > div[data-testid="stHorizontalBlock"] .stElementContainer { padding: 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -178,6 +159,7 @@ def render_card_section(title: str, items: list, height: int = 310):
 
 # ── 페이지 콘텐츠 ─────────────────────────────────────────────────────────────
 page = st.session_state.page
+is_logged_in = "user" in st.session_state
 
 if page == "main":
     render_card_section("List 1 — Title", [
@@ -197,12 +179,12 @@ elif page == "wishlist":
     st.info("위시리스트 페이지입니다. 원하는 항목을 추가해 보세요.")
 
 elif page == "my":
-    st.markdown('<p style="font-size:1.05rem;font-weight:600;letter-spacing:0.06em;'
-                'text-transform:uppercase;margin-bottom:1rem">👤 My Page</p>',
-                unsafe_allow_html=True)
-    st.info("마이페이지입니다. 프로필 정보를 확인하세요.")
+    if is_logged_in:
+        render_my_page()       # 로그인 상태 → 마이페이지
+    else:
+        render_auth_page()     # 비로그인 상태 → 로그인/회원가입 선택
 
-# ── 하단 네비게이션 버튼 (Streamlit 네이티브 — CSS로 고정 바로 변환) ──────────
+# ── 하단 네비게이션 버튼 ──────────────────────────────────────────────────────
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -216,7 +198,8 @@ with col2:
         st.rerun()
 
 with col3:
-    if st.button("👤", key="nav_my", help="My Page", use_container_width=True):
+    # 로그인 상태면 아이콘 색으로 구분
+    my_icon = "👤" if not is_logged_in else "👤✓"
+    if st.button(my_icon, key="nav_my", help="My Page", use_container_width=True):
         st.session_state.page = "my"
         st.rerun()
-        
