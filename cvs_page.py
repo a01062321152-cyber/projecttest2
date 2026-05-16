@@ -171,6 +171,8 @@ def render_cvs_popup(item: dict):
             for p in parties:
                 confirmed_cnt = sum(1 for o in p["orders"] if o["confirmed"])
                 already = any(o["user_id"] == uid for o in p["orders"])
+                has_loc = bool(p.get("visit_location"))
+
                 st.markdown(f"""
                 <div class="cvs-party-card">
                   <span class="cvs-time-badge">🕐 {p['depart_time']}</span>
@@ -178,21 +180,58 @@ def render_cvs_popup(item: dict):
                   <span style="font-size:.8rem;color:#6B7280;">
                     📦 주문 {len(p['orders'])}건 (확정 {confirmed_cnt}건) |
                     📞 {p['contact']}
+                    {f"| 📍 {p['visit_location']}" if has_loc else ""}
                   </span>
                 </div>""", unsafe_allow_html=True)
 
                 if already:
                     st.success("✅ 이미 신청함")
                     st.caption(f"💳 계좌: {p['account']}")
+                    if has_loc:
+                        if st.button("📍 방문 위치 확인",
+                                     key=f"cvs_loc_{p['party_id']}",
+                                     use_container_width=True):
+                            st.session_state.cvs_sub      = "view_loc"
+                            st.session_state.cvs_party_id = p["party_id"]
+                            st.rerun()
                 elif not is_logged:
                     st.caption("신청하려면 로그인하세요.")
                 else:
-                    if st.button("이 파티에 신청",
-                                 key=f"cvs_join_{p['party_id']}",
-                                 use_container_width=True):
-                        st.session_state.cvs_sub      = "apply"
-                        st.session_state.cvs_party_id = p["party_id"]
-                        st.rerun()
+                    c1, c2 = st.columns([3, 2])
+                    with c1:
+                        if st.button("이 파티에 신청",
+                                     key=f"cvs_join_{p['party_id']}",
+                                     use_container_width=True):
+                            st.session_state.cvs_sub      = "apply"
+                            st.session_state.cvs_party_id = p["party_id"]
+                            st.rerun()
+                    with c2:
+                        if has_loc:
+                            if st.button("📍 위치 확인",
+                                         key=f"cvs_loc_{p['party_id']}",
+                                         use_container_width=True):
+                                st.session_state.cvs_sub      = "view_loc"
+                                st.session_state.cvs_party_id = p["party_id"]
+                                st.rerun()
+
+    # ── VIEW_LOC: 방문 위치 지도 ─────────────────────────────────────────
+    elif sub == "view_loc":
+        p = get_party(st.session_state.cvs_party_id)
+        if not p:
+            st.session_state.cvs_sub = "list"; st.rerun()
+            return
+
+        st.markdown(f"#### 📍 방문 편의점 위치 — {p['creator_name']}의 파티")
+        st.markdown(f"**{p.get('visit_location', '')}**")
+        components.html(
+            _map_view(p.get("visit_lat", 37.5665),
+                      p.get("visit_lng", 126.9780),
+                      p.get("visit_location", "")),
+            height=300, scrolling=False,
+        )
+
+        if st.button("← 뒤로", key="cvs_back_loc"):
+            st.session_state.cvs_sub = "list"; st.rerun()
 
     # ── APPLY ─────────────────────────────────────────────────────────────
     elif sub == "apply":
@@ -203,6 +242,8 @@ def render_cvs_popup(item: dict):
             return
 
         st.markdown(f"#### 📝 신청 — {p['creator_name']}의 파티")
+        if p.get("visit_location"):
+            st.info(f"📍 방문 편의점: **{p['visit_location']}**")
         st.info(f"💳 입금 계좌: **{p['account']}**\n\n"
                 f"신청 후 위 계좌로 입금하면 파티장이 확인 후 합류 처리해 줍니다.")
 
@@ -211,7 +252,24 @@ def render_cvs_popup(item: dict):
         total = qty * price
         st.markdown(f"**예상 금액: {total:,}원** ({qty}개 × {price:,}원)")
 
-        if st.button("신청하기", use_container_width=True, key="cvs_apply_submit"):
+        # 신청하기 + 위치 확인 버튼 나란히
+        has_loc = bool(p.get("visit_location"))
+        if has_loc:
+            b1, b2 = st.columns([3, 2])
+            with b1:
+                apply_clicked = st.button("신청하기", use_container_width=True,
+                                          key="cvs_apply_submit")
+            with b2:
+                if st.button("📍 위치 확인", use_container_width=True,
+                             key="cvs_apply_loc"):
+                    st.session_state.cvs_sub      = "view_loc"
+                    st.session_state.cvs_party_id = p["party_id"]
+                    st.rerun()
+        else:
+            apply_clicked = st.button("신청하기", use_container_width=True,
+                                      key="cvs_apply_submit")
+
+        if apply_clicked:
             ok, msg = apply_order(
                 p["party_id"], uid, user.get("name", ""),
                 label, image_url, int(qty), price)
@@ -229,3 +287,4 @@ def render_cvs_popup(item: dict):
 
         if st.button("← 뒤로", key="cvs_back_apply"):
             st.session_state.cvs_sub = "list"; st.rerun()
+          
