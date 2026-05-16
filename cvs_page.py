@@ -7,6 +7,7 @@ from cvs_store import (get_waiting_parties, get_party, apply_order,
                         confirm_order, depart_party, set_gather_location)
 from notification_store import push
 
+
 CSS = """
 <style>
 .cvs-party-card{border:1.5px solid #E5E7EB;border-radius:14px;
@@ -21,15 +22,6 @@ CSS = """
 .cvs-unpaid{color:#DC2626;}
 </style>
 """
-
-# ── 유효성 검사 ──────────────────────────────────────────────────────────────
-
-def _validate_contact(v: str) -> str | None:
-    v = v.strip()
-    if not v:                              return "연락처를 입력해 주세요."
-    if len(v) < 3:                         return "연락처가 너무 짧습니다."
-    if re.fullmatch(r'[가-힣\s]{1,4}', v): return "올바른 연락처를 입력해 주세요. (전화번호 또는 카카오톡 ID)"
-    return None
 
 def _validate_account(v: str) -> str | None:
     v = v.strip()
