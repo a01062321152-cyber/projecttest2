@@ -18,6 +18,46 @@ BANKS = [
     "제주은행", "수협은행", "우체국", "새마을금고", "신협",
 ]
 
+# ── URL 검증 ────────────────────────────────────────────────────────────────
+
+_URL_RE = re.compile(
+    r'^https?://'                        # http:// 또는 https://
+    r'[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}'   # 도메인
+    r'(/[^\s]*)?$',                      # 경로 (선택)
+    re.IGNORECASE
+)
+_IMG_EXT = re.compile(
+    r'\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$', re.IGNORECASE)
+
+def validate_image_url(url: str) -> str | None:
+    """
+    이미지 URL 검증.
+    빈 문자열 → None (통과, 선택 항목)
+    형식 불일치 → 에러 메시지
+    """
+    url = url.strip()
+    if not url:
+        return None   # 선택 항목이므로 빈 값은 허용
+    if not _URL_RE.match(url):
+        return "올바른 URL 형식이 아닙니다. (예: https://example.com/image.jpg)"
+    if not _IMG_EXT.search(url):
+        return "이미지 파일 URL이어야 합니다. (.jpg .jpeg .png .gif .webp .bmp .svg)"
+    return None
+
+
+def image_url_input(label: str, key: str,
+                    placeholder: str = "https://example.com/image.jpg") -> tuple[str, str | None]:
+    """이미지 URL 입력 + 실시간 검증 위젯. (value, error_or_None) 반환."""
+    url = st.text_input(label, placeholder=placeholder, key=key)
+    err = validate_image_url(url)
+    if url.strip() and err:
+        st.error(err)
+    elif url.strip() and not err:
+        st.markdown(
+            f'<div style="font-size:.75rem;color:#16A34A;">✅ 유효한 이미지 URL</div>',
+            unsafe_allow_html=True)
+    return url.strip(), err
+
 CSS = """
 <style>
 .tab-section-title{font-size:1.1rem;font-weight:700;color:#1a1a1a;
@@ -382,12 +422,13 @@ def render_wishlist_page():
         r_desc = st.text_area("상품 설명", placeholder="상태, 브랜드 등 간단히 적어주세요", key="r_desc")
         st.markdown("**연락처** (당첨자가 연락할 방법)")
         r_contact, r_contact_err = _contact_input("roulette_reg")
-        r_img = st.text_input("이미지 URL (선택)", placeholder="https://...", key="r_img")
+        r_img, r_img_err = image_url_input("이미지 URL (선택)", key="r_img")
 
         if st.button("등록", use_container_width=True, key="roulette_reg_btn"):
             errs = []
             if not r_name.strip():               errs.append("상품 이름을 입력해 주세요.")
             if r_contact_err or not r_contact:   errs.append(r_contact_err or "연락처를 입력해 주세요.")
+            if r_img_err:                        errs.append(r_img_err)
             if temp < 50:                        errs.append(f"매너 온도 50° 이상만 등록 가능 (현재 {temp}°)")
             if errs:
                 for e in errs: st.error(e)
