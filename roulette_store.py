@@ -61,6 +61,7 @@ def get_item(rid):
 def spin(rid: str, user_id: str) -> tuple[bool, str]:
     """
     크래딧 차감은 호출부(wishlist_page)에서 먼저 처리.
+    크래딧·매너온도 조건 충족 시 중복 참여 가능.
     Returns (is_win, message)
     """
     d    = _r()
@@ -68,10 +69,6 @@ def spin(rid: str, user_id: str) -> tuple[bool, str]:
     if not item:                    return False, "상품을 찾을 수 없습니다."
     if item["status"] != "active":  return False, "이미 당첨된 상품입니다."
     if item["owner_id"] == user_id: return False, "본인 상품은 참여할 수 없습니다."
-
-    log        = _rl()
-    user_spins = log.get(user_id, [])
-    if rid in user_spins:           return False, "이미 참여한 상품입니다."
 
     # 누적 확률: 20 - spin_count (최소 2)
     total  = max(2, 20 - item["spin_count"])
@@ -82,10 +79,6 @@ def spin(rid: str, user_id: str) -> tuple[bool, str]:
         item["status"]    = "won"
         item["winner_id"] = user_id
     _w(d)
-
-    # 참여 기록
-    log.setdefault(user_id, []).append(rid)
-    _wl(log)
 
     return is_win, "win" if is_win else f"꽝 (다음 확률: 1/{max(1, total - 1)})"
 
@@ -114,4 +107,5 @@ def get_all_items() -> list:
     return list(_r().values())
 
 def has_spun(rid, user_id):
-    return rid in _rl().get(user_id, [])
+    """중복 참여 허용으로 항상 False 반환"""
+    return False
