@@ -113,27 +113,80 @@ st.markdown(
         left: 0;
         right: 0;
         height: 64px;
-        background: #fff;
-        border-top: 1.5px solid #D8D4CB;
+        background: #ffffff;
+        border-top: 1px solid #E5E7EB;
         display: flex;
         align-items: center;
         justify-content: space-around;
-        z-index: 999;
+        z-index: 9999;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
     }
-    .nav-btn {
+
+    /* 각 버튼 래퍼 — tooltip 기준점 */
+    .nav-item {
+        position: relative;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 4px;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
         cursor: pointer;
-        text-decoration: none;
-        color: #6B7280;
-        transition: color 0.15s;
     }
-    .nav-btn:hover { color: #3B82F6; }
-    .nav-btn.active { color: #1a1a1a; }
-    .nav-icon { font-size: 1.5rem; }
-    .nav-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* 아이콘 링크 */
+    .nav-item a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: none;
+        background: transparent;
+        color: #9CA3AF;
+        font-size: 1.45rem;
+        text-decoration: none;
+        transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    }
+    .nav-item a:hover {
+        color: #3B82F6;
+        background: #EFF6FF;
+        transform: translateY(-2px);
+    }
+
+    /* 툴팁 */
+    .nav-tooltip {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        background: #1a1a1a;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        padding: 0.35rem 0.75rem;
+        border-radius: 8px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    /* 툴팁 아래 꼬리 */
+    .nav-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: #1a1a1a;
+    }
+    .nav-item:hover .nav-tooltip {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -218,48 +271,36 @@ elif page == "my":
     st.markdown('<div class="section-title">👤 My Page</div>', unsafe_allow_html=True)
     st.info("마이페이지입니다. 프로필 정보를 확인하세요.")
 
-# ── 하단 네비게이션 버튼 (Streamlit 버튼으로 구현) ───────────────────────────
-st.markdown("<br><br><br>", unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("🍎\nWishlist", use_container_width=True, key="nav_wish"):
-        st.session_state.page = "wishlist"
-        st.rerun()
-
-with col2:
-    if st.button("🏠\nHome", use_container_width=True, key="nav_home"):
-        st.session_state.page = "main"
-        st.rerun()
-
-with col3:
-    if st.button("👤\nMy Page", use_container_width=True, key="nav_my"):
-        st.session_state.page = "my"
-        st.rerun()
-
-# ── 네비게이션 바 고정 스타일 보완 ───────────────────────────────────────────
+# ── 하단 네비게이션 바 (HTML 고정 바 + 툴팁) ────────────────────────────────
+# ?page= 쿼리 파라미터로 페이지 전환 (JavaScript → Streamlit URL)
 st.markdown(
     """
-    <style>
-    /* Streamlit 버튼을 네비게이션 바처럼 스타일링 */
-    div[data-testid="column"] button {
-        background: #fff !important;
-        border: none !important;
-        border-top: 2px solid #E5E7EB !important;
-        border-radius: 0 !important;
-        color: #6B7280 !important;
-        font-size: 0.8rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.04em !important;
-        padding: 0.7rem !important;
-        transition: color 0.15s, background 0.15s !important;
-    }
-    div[data-testid="column"] button:hover {
-        background: #F0F4FF !important;
-        color: #3B82F6 !important;
-    }
-    </style>
+    <div class="bottom-nav">
+
+        <div class="nav-item">
+            <a href="?page=wishlist" title="">🍎</a>
+            <div class="nav-tooltip">Wishlist</div>
+        </div>
+
+        <div class="nav-item">
+            <a href="?page=main" title="">🏠</a>
+            <div class="nav-tooltip">Home</div>
+        </div>
+
+        <div class="nav-item">
+            <a href="?page=my" title="">👤</a>
+            <div class="nav-tooltip">My Page</div>
+        </div>
+
+    </div>
     """,
     unsafe_allow_html=True,
 )
+
+# ── 쿼리 파라미터로 페이지 상태 동기화 ──────────────────────────────────────
+params = st.query_params
+if "page" in params:
+    queried = params["page"]
+    if queried != st.session_state.page:
+        st.session_state.page = queried
+        st.rerun()
