@@ -146,30 +146,40 @@ def render_card_section(title: str, items: list, list_key: str, list_type: str):
         st.caption("항목이 없습니다.")
         return
 
-    cols = st.columns(n)
-    for i, (col, item) in enumerate(zip(cols, items)):
-        label = item.get("label","")
-        img   = item.get("image_url","")
-        price = item.get("price",0)
-        ptag  = f'<div class="card-price-tag">{price:,}원</div>' if price else ""
+    COLS_PER_ROW = 6
+    # items를 6개씩 청크로 나눔
+    chunks = [items[i:i+COLS_PER_ROW] for i in range(0, n, COLS_PER_ROW)]
 
-        with col:
-            if img:
-                st.markdown(f'<div class="card-img-wrap"><img src="{img}" alt="{label}">{ptag}</div>',
-                            unsafe_allow_html=True)
-            else:
-                icon = "🧴" if list_type=="essentials" else "🏪"
-                st.markdown(f'<div class="card-img-wrap">'
-                            f'<div class="card-img-placeholder">{icon}</div>{ptag}</div>',
-                            unsafe_allow_html=True)
+    for chunk_idx, chunk in enumerate(chunks):
+        cols = st.columns(len(chunk))
+        for i, (col, item) in enumerate(zip(cols, chunk)):
+            global_idx = chunk_idx * COLS_PER_ROW + i
+            label = item.get("label","")
+            img   = item.get("image_url","")
+            price = item.get("price",0)
+            ptag  = f'<div class="card-price-tag">{price:,}원</div>' if price else ""
 
-            st.markdown('<div data-card-btn="1">', unsafe_allow_html=True)
-            if st.button(f"{btn_label} {label}", key=f"card_{list_key}_{i}",
-                         use_container_width=True):
-                st.session_state.modal_item = item
-                st.session_state.modal_type = list_type
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            with col:
+                if img:
+                    st.markdown(f'<div class="card-img-wrap"><img src="{img}" alt="{label}">{ptag}</div>',
+                                unsafe_allow_html=True)
+                else:
+                    icon = "🧴" if list_type=="essentials" else "🏪"
+                    st.markdown(f'<div class="card-img-wrap">'
+                                f'<div class="card-img-placeholder">{icon}</div>{ptag}</div>',
+                                unsafe_allow_html=True)
+
+                st.markdown('<div data-card-btn="1">', unsafe_allow_html=True)
+                if st.button(f"{btn_label} {label}", key=f"card_{list_key}_{global_idx}",
+                             use_container_width=True):
+                    st.session_state.modal_item = item
+                    st.session_state.modal_type = list_type
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        # 행 사이 간격
+        if chunk_idx < len(chunks) - 1:
+            st.markdown("<div style='height:.6rem'></div>", unsafe_allow_html=True)
 
     st.markdown("<div style='height:1.4rem'></div>", unsafe_allow_html=True)
 
@@ -296,4 +306,3 @@ with nc3:
     icon = "🛡️" if is_admin else ("👤✓" if is_logged else "👤")
     if st.button(icon, key="nav_my", help="마이페이지", use_container_width=True):
         st.session_state.modal_item=None; st.session_state.page="my"; st.rerun()
-      
