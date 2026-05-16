@@ -1,5 +1,6 @@
 """
 pot_page.py  —  구메팟 팝업 UI
+
 """
 
 import streamlit as st
