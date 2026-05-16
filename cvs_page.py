@@ -222,13 +222,21 @@ def render_cvs_popup(item: dict):
             return
 
         st.markdown(f"#### 📍 방문 편의점 위치 — {p['creator_name']}의 파티")
-        st.markdown(f"**{p.get('visit_location', '')}**")
-        components.html(
-            _map_view(p.get("visit_lat", 37.5665),
-                      p.get("visit_lng", 126.9780),
-                      p.get("visit_location", "")),
-            height=300, scrolling=False,
-        )
+
+        v_loc = p.get("visit_location", "")
+        v_lat = p.get("visit_lat", 0.0)
+        v_lng = p.get("visit_lng", 0.0)
+
+        if v_loc:
+            st.markdown(f"**📍 {v_loc}**")
+
+        if v_lat == 0.0 and v_lng == 0.0:
+            st.warning("이 파티는 위치 정보가 등록되지 않았습니다.")
+        else:
+            components.html(
+                _map_view(v_lat, v_lng, v_loc),
+                height=300, scrolling=False,
+            )
 
         if st.button("← 뒤로", key="cvs_back_loc"):
             st.session_state.cvs_sub = "list"; st.rerun()
@@ -287,4 +295,3 @@ def render_cvs_popup(item: dict):
 
         if st.button("← 뒤로", key="cvs_back_apply"):
             st.session_state.cvs_sub = "list"; st.rerun()
-          
