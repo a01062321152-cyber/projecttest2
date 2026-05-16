@@ -42,6 +42,8 @@ def _validate_contact_kakao(v: str) -> str | None:
     if not v:         return "카카오톡 ID를 입력해 주세요."
     if len(v) < 3:    return "카카오톡 ID는 3자 이상이어야 합니다."
     if " " in v:      return "카카오톡 ID에 공백을 포함할 수 없습니다."
+    if not re.fullmatch(r'[A-Za-z0-9_]+', v):
+        return "카카오톡 ID는 영어, 숫자, 밑줄(_)만 사용할 수 있습니다."
     return None
 
 def _validate_contact_phone(v: str) -> str | None:
@@ -81,7 +83,8 @@ def _contact_input(key_prefix: str) -> tuple[str, str | None]:
     )
     if contact_type == "카카오톡 ID":
         val = st.text_input("카카오톡 ID",
-                             placeholder="예: gume_user",
+                             placeholder="예: gume_user123",
+                             help="영어, 숫자, 밑줄(_)만 사용 가능합니다.",
                              key=f"{key_prefix}_cval")
         err = _validate_contact_kakao(val) if val else None
     else:
