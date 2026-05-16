@@ -195,6 +195,157 @@ if(navigator.geolocation){
 </script></body></html>"""
 
 
+def _map_pick_with_coords(key: str, height: int = 390) -> tuple[float, float]:
+    """
+    지도 클릭 → 지도 아래 좌표 입력칸에 자동 반영되는 통합 컴포넌트.
+    지도·좌표 입력이 하나의 iframe 안에 있어 클릭 즉시 값이 채워짐.
+    Returns (lat, lng) — session_state 기반.
+    """
+    lat_key = f"_map_lat_{key}"
+    lng_key = f"_map_lng_{key}"
+    if lat_key not in st.session_state:
+        st.session_state[lat_key] = 37.5665
+    if lng_key not in st.session_state:
+        st.session_state[lng_key] = 126.9780
+
+    cur_lat = st.session_state[lat_key]
+    cur_lng = st.session_state[lng_key]
+
+    has_pin = (abs(cur_lat - 37.5665) > 0.00001 or abs(cur_lng - 126.9780) > 0.00001)
+    pin_js = f"setPin({cur_lat},{cur_lng},false);" if has_pin else ""
+
+    html = f"""<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:sans-serif;background:transparent;}}
+#map{{width:100%;height:{height - 90}px;}}
+#coord-bar{{display:flex;align-items:center;gap:6px;padding:8px 10px;
+  background:#F8FAFC;border:1.5px solid #E5E7EB;border-top:none;
+  border-radius:0 0 12px 12px;}}
+label{{font-size:.73rem;font-weight:600;color:#6B7280;white-space:nowrap;}}
+#coord-bar input{{flex:1;border:1.5px solid #DBEAFE;border-radius:8px;
+  padding:5px 7px;font-size:.82rem;color:#1a1a1a;background:#fff;outline:none;}}
+#coord-bar input:focus{{border-color:#3B82F6;}}
+#cur-btn{{background:#3B82F6;color:#fff;border:none;border-radius:8px;
+  padding:6px 10px;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;}}
+#cur-btn:hover{{background:#2563EB;}}
+#info-bar{{position:absolute;bottom:94px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);color:#fff;font-size:.72rem;
+  padding:3px 12px;border-radius:20px;z-index:999;white-space:nowrap;pointer-events:none;}}
+#map-wrap{{position:relative;}}
+</style>
+</head><body>
+<div id="map-wrap">
+  <div id="map"></div>
+  <div id="info-bar">지도를 클릭하거나 📍 내 위치 버튼을 누르세요</div>
+</div>
+<div id="coord-bar">
+  <label>위도</label>
+  <input id="lat-inp" type="number" step="0.00001" value="{cur_lat:.5f}" oninput="onManualEdit()"/>
+  <label>경도</label>
+  <input id="lng-inp" type="number" step="0.00001" value="{cur_lng:.5f}" oninput="onManualEdit()"/>
+  <button id="cur-btn" onclick="goMyLocation()">📍 내 위치</button>
+</div>
+<script>
+var map=L.map('map').setView([{cur_lat},{cur_lng}],14);
+L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
+  {{attribution:'© OpenStreetMap'}}).addTo(map);
+var mk=null, myMk=null;
+
+function setPin(la,lo,send){{
+  if(mk) map.removeLayer(mk);
+  mk=L.marker([la,lo]).addTo(map);
+  document.getElementById('lat-inp').value=la.toFixed(5);
+  document.getElementById('lng-inp').value=lo.toFixed(5);
+  document.getElementById('info-bar').innerText='✅ '+la.toFixed(5)+', '+lo.toFixed(5);
+  if(send!==false)
+    window.parent.postMessage({{type:'MAP_COORD',key:'{key}',lat:parseFloat(la.toFixed(5)),lng:parseFloat(lo.toFixed(5))}},'*');
+}}
+
+map.on('click',function(e){{ setPin(e.latlng.lat,e.latlng.lng); }});
+
+function onManualEdit(){{
+  var la=parseFloat(document.getElementById('lat-inp').value);
+  var lo=parseFloat(document.getElementById('lng-inp').value);
+  if(!isNaN(la)&&!isNaN(lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180){{
+    setPin(la,lo); map.setView([la,lo],map.getZoom());
+  }}
+}}
+
+function goMyLocation(){{
+  if(!navigator.geolocation){{alert('위치 권한이 없습니다.');return;}}
+  navigator.geolocation.getCurrentPosition(function(pos){{
+    var la=pos.coords.latitude,lo=pos.coords.longitude;
+    map.setView([la,lo],16);
+    if(myMk) map.removeLayer(myMk);
+    myMk=L.circleMarker([la,lo],{{radius:8,color:'#3B82F6',fillColor:'#93C5FD',fillOpacity:.9}})
+      .addTo(map).bindPopup('📍 내 위치').openPopup();
+    setPin(la,lo);
+  }},function(){{alert('위치를 가져올 수 없습니다.');}});
+}}
+
+// 초기 현재위치 (핀 없을 때만)
+if(!{str(has_pin).lower()}){{
+  if(navigator.geolocation){{
+    navigator.geolocation.getCurrentPosition(function(pos){{
+      var la=pos.coords.latitude,lo=pos.coords.longitude;
+      map.setView([la,lo],15);
+      myMk=L.circleMarker([la,lo],{{radius:8,color:'#3B82F6',fillColor:'#93C5FD',fillOpacity:.9}})
+        .addTo(map).bindPopup('📍 내 위치');
+    }});
+  }}
+}}
+
+// 저장된 핀 복원
+{pin_js}
+</script>
+</body></html>"""
+
+    components.html(html, height=height, scrolling=False)
+
+    # postMessage → query_params → session_state 갱신
+    qp = st.query_params
+    mlat = f"_mlat_{key}"; mlng = f"_mlng_{key}"
+    changed = False
+    for (qk, sk, attr) in [(mlat, lat_key, 'lat'), (mlng, lng_key, 'lng')]:
+        if qk in qp:
+            try:
+                v = float(qp[qk])
+                if abs(v - st.session_state[sk]) > 0.000001:
+                    st.session_state[sk] = v; changed = True
+            except: pass
+    if changed:
+        for qk in [mlat, mlng]:
+            if qk in qp: qp.pop(qk)
+        st.rerun()
+
+    # JS: postMessage 수신 → query_params로 전달
+    st.markdown(f"""<script>
+    (function(){{
+      if(window['_cl_{key}']) return; window['_cl_{key}']=true;
+      window.addEventListener('message',function(e){{
+        if(!e.data||e.data.type!=='MAP_COORD'||e.data.key!=='{key}') return;
+        var u=new URL(window.location.href);
+        u.searchParams.set('_mlat_{key}',e.data.lat);
+        u.searchParams.set('_mlng_{key}',e.data.lng);
+        window.location.href=u.toString();
+      }});
+    }})();
+    </script>""", unsafe_allow_html=True)
+
+    lat = st.session_state[lat_key]
+    lng = st.session_state[lng_key]
+    st.markdown(
+        f'<div style="font-size:.8rem;color:#3B82F6;background:#EFF6FF;'
+        f'padding:5px 12px;border-radius:8px;margin-top:2px;">'
+        f'선택 좌표: 위도 <b>{lat:.5f}</b> / 경도 <b>{lng:.5f}</b></div>',
+        unsafe_allow_html=True)
+    return lat, lng
+
+
 def _map_view_inline(lat, lng, name):
     return f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -324,18 +475,11 @@ def render_wishlist_page():
                 account, account_err = _account_input("cvs_create")
 
                 st.markdown("**📍 방문할 편의점 위치**")
-                st.caption("지도를 클릭하거나 📍 내 위치로 버튼으로 편의점 위치를 선택하세요.")
-                components.html(_map_pick_html(), height=300, scrolling=False)
+                st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다. 위치 이름도 입력해 주세요.")
+                visit_lat, visit_lng = _map_pick_with_coords("cvs_visit", height=390)
                 visit_loc = st.text_input("편의점 이름/위치 설명",
                                           placeholder="예: GS25 역삼점",
                                           key="cvs_visit_loc")
-                c_lat, c_lng = st.columns(2)
-                with c_lat:
-                    visit_lat = st.number_input("위도", value=37.5665,
-                                                format="%.5f", key="cvs_visit_lat")
-                with c_lng:
-                    visit_lng = st.number_input("경도", value=126.9780,
-                                                format="%.5f", key="cvs_visit_lng")
 
                 st.markdown("")
                 if st.button("파티 생성", key="cvs_create_btn", use_container_width=True):
@@ -436,17 +580,9 @@ def render_wishlist_page():
                                     key=f"gloc_{p['party_id']}",
                                     placeholder="예: 편의점 앞 공원 벤치",
                                 )
-                                gather_lat = st.number_input(
-                                    "위도", value=37.5665, format="%.5f",
-                                    key=f"glat_{p['party_id']}",
-                                )
-                                gather_lng = st.number_input(
-                                    "경도", value=126.9780, format="%.5f",
-                                    key=f"glng_{p['party_id']}",
-                                )
-                                st.caption("아래 지도를 클릭하면 좌표가 표시됩니다. "
-                                           "📍 내 위치로 버튼으로 현재 위치를 불러올 수 있어요.")
-                                components.html(_map_pick_html(), height=300, scrolling=False)
+                                st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다.")
+                                gather_lat, gather_lng = _map_pick_with_coords(
+                                    f"gather_{p['party_id']}", height=390)
 
                                 if st.button("📍 위치 전송",
                                              key=f"cvs_gather_{p['party_id']}",
