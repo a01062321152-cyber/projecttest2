@@ -323,6 +323,20 @@ def render_wishlist_page():
                 st.markdown("**입금 계좌**")
                 account, account_err = _account_input("cvs_create")
 
+                st.markdown("**📍 방문할 편의점 위치**")
+                st.caption("지도를 클릭하거나 📍 내 위치로 버튼으로 편의점 위치를 선택하세요.")
+                components.html(_map_pick_html(), height=300, scrolling=False)
+                visit_loc = st.text_input("편의점 이름/위치 설명",
+                                          placeholder="예: GS25 역삼점",
+                                          key="cvs_visit_loc")
+                c_lat, c_lng = st.columns(2)
+                with c_lat:
+                    visit_lat = st.number_input("위도", value=37.5665,
+                                                format="%.5f", key="cvs_visit_lat")
+                with c_lng:
+                    visit_lng = st.number_input("경도", value=126.9780,
+                                                format="%.5f", key="cvs_visit_lng")
+
                 st.markdown("")
                 if st.button("파티 생성", key="cvs_create_btn", use_container_width=True):
                     errs = []
@@ -334,12 +348,15 @@ def render_wishlist_page():
                         errs.append(account_err)
                     elif not account or account.strip() in ("", "은행 선택"):
                         errs.append("계좌번호를 올바르게 입력해 주세요.")
+                    if not visit_loc.strip():
+                        errs.append("방문할 편의점 위치를 입력해 주세요.")
 
                     if errs:
                         for e in errs: st.error(e)
                     else:
                         depart_str = depart_time_obj.strftime("%H:%M")
-                        pid = cvs_create(uid, uname, depart_str, contact, account)
+                        pid = cvs_create(uid, uname, depart_str, contact, account,
+                                         visit_loc.strip(), float(visit_lat), float(visit_lng))
                         st.success(f"파티가 생성됐습니다! (ID: {pid})")
                         st.rerun()
 
