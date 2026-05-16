@@ -224,16 +224,14 @@ def render_admin_editor(list_key: str, info: dict):
                 st.success("추가"); st.rerun()
             else: st.warning("이름을 입력해 주세요.")
 
-        # list1·list2는 삭제 불가, 추가 리스트만 삭제 가능
-        if list_key not in ("list1","list2"):
-            st.divider()
-            if st.button(f"🗑️ 이 리스트 삭제 ({info.get('title',list_key)})",
-                         key=f"del_list_{list_key}", type="secondary"):
-                from notification_store import push_all
-                push_all(get_all_user_ids(),"item_deleted",
-                         f"리스트 '{info.get('title',list_key)}'이 삭제됐습니다.")
-                delete_list(list_key)
-                st.success("리스트 삭제 완료"); st.rerun()
+        st.divider()
+        if st.button(f"🗑️ 이 리스트 삭제 ({info.get('title',list_key)})",
+                     key=f"del_list_{list_key}", type="secondary"):
+            from notification_store import push_all
+            push_all(get_all_user_ids(),"item_deleted",
+                     f"리스트 '{info.get('title',list_key)}'이 삭제됐습니다.")
+            delete_list(list_key)
+            st.success("리스트 삭제 완료"); st.rerun()
 
 
 # ── 모달 팝업 ─────────────────────────────────────────────────────────────────
@@ -298,3 +296,4 @@ with nc3:
     icon = "🛡️" if is_admin else ("👤✓" if is_logged else "👤")
     if st.button(icon, key="nav_my", help="마이페이지", use_container_width=True):
         st.session_state.modal_item=None; st.session_state.page="my"; st.rerun()
+      
