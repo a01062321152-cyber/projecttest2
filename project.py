@@ -259,24 +259,23 @@ else:
         # 관리자: 새 리스트 추가
         if is_admin:
             st.markdown("---")
-            st.markdown("**➕ 새 리스트 추가**")
-            nl1, nl2, nl3 = st.columns([4, 2, 2])
-            with nl1:
+            with st.expander("➕ 새 리스트 추가", expanded=False):
                 new_list_title = st.text_input("리스트 제목", key="new_list_title",
                                                 placeholder="예: 냉동식품")
-            with nl2:
-                new_list_type = st.selectbox("타입", ["essentials","cvs"],
-                                              format_func=lambda x: "🧴 생필품" if x=="essentials" else "🏪 편의점",
-                                              key="new_list_type")
-            with nl3:
-                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                if st.button("추가", key="add_list_btn", use_container_width=True):
+                new_list_type  = st.radio(
+                    "리스트 타입",
+                    options=["essentials", "cvs"],
+                    format_func=lambda x: "🧴 생필품 (정기구메)" if x=="essentials" else "🏪 편의점",
+                    horizontal=True,
+                    key="new_list_type",
+                )
+                if st.button("➕ 리스트 추가", key="add_list_btn", use_container_width=True):
                     if new_list_title.strip():
                         new_key = add_list(new_list_title, new_list_type)
                         from notification_store import push_all
-                        push_all(get_all_user_ids(),"item_added",
+                        push_all(get_all_user_ids(), "item_added",
                                  f"새 리스트 '{new_list_title}'이 추가됐습니다.")
-                        st.success(f"리스트 추가 완료!"); st.rerun()
+                        st.success(f"'{new_list_title}' 리스트 추가 완료!"); st.rerun()
                     else:
                         st.warning("제목을 입력해 주세요.")
 
