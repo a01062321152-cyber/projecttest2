@@ -113,8 +113,6 @@ def delete_list_item(list_key, idx):
     return removed
 
 def delete_list(list_key: str) -> bool:
-    """리스트 전체 삭제. list1·list2는 삭제 불가. True/False 반환."""
-    if list_key in ("list1", "list2"): return False
     data = _load_lists()
     if list_key not in data: return False
     del data[list_key]
