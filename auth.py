@@ -237,4 +237,3 @@ L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
   {{attribution:'© OpenStreetMap'}}).addTo(m);
 L.marker([{lat},{lng}]).addTo(m).bindPopup('{name}').openPopup();
 </script></body></html>"""
-  
