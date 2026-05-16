@@ -13,18 +13,21 @@ from rating_store import add_score
 
 CSS = """
 <style>
-.ess-party-card{border:1.5px solid #E5E7EB;border-radius:14px;
-  padding:.9rem 1.1rem;margin-bottom:.8rem;background:#F9FAFB;}
-.ess-party-card:hover{border-color:#3B82F6;}
+.ess-party-card{border:1.5px solid #BFDBFE;border-radius:14px;
+  padding:.9rem 1.1rem;margin-bottom:.8rem;background:#FFFFFF;
+  box-shadow:0 2px 8px rgba(37,99,235,.06);transition:all .15s;}
+.ess-party-card:hover{border-color:#2563EB;background:#EFF6FF;
+  box-shadow:0 4px 16px rgba(37,99,235,.12);}
 .ess-badge{display:inline-block;font-size:.7rem;font-weight:700;
   padding:.15rem .55rem;border-radius:20px;margin-left:.4rem;}
-.ess-open{background:#DCFCE7;color:#16A34A;}
-.ess-closed{background:#FEF3C7;color:#D97706;}
-.ess-rated{background:#EDE9FE;color:#7C3AED;}
+.ess-open{background:#DBEAFE;color:#1D4ED8;}
+.ess-closed{background:#FEF9C3;color:#B45309;}
+.ess-rated{background:#EFF6FF;color:#2563EB;}
 .ess-applicant-row{display:flex;justify-content:space-between;
-  padding:.45rem .6rem;border-radius:8px;background:#F3F4F6;margin-bottom:.35rem;
-  font-size:.82rem;}
-.credit-badge{display:inline-block;background:#FEF3C7;color:#D97706;
+  padding:.5rem .8rem;border-radius:10px;
+  background:#EFF6FF;border:1px solid #DBEAFE;
+  margin-bottom:.4rem;font-size:.82rem;color:#0F172A;}
+.credit-badge{display:inline-block;background:#FEF9C3;color:#B45309;
   font-size:.72rem;font-weight:700;padding:.15rem .55rem;border-radius:20px;}
 </style>
 """
@@ -123,7 +126,7 @@ def render_essentials_popup(item: dict):
         st.image(image_url, use_container_width=True)
     else:
         st.markdown('<div style="width:100%;height:140px;border-radius:12px;'
-                    'background:linear-gradient(135deg,#EEF4FF,#DBEAFE);'
+                    'background:linear-gradient(135deg,#EFF6FF,#DBEAFE);'
                     'display:flex;align-items:center;justify-content:center;'
                     'font-size:3rem;margin-bottom:.8rem;">🧴</div>',
                     unsafe_allow_html=True)
@@ -154,7 +157,7 @@ def render_essentials_popup(item: dict):
                 <div class="ess-party-card">
                   <b>파티 #{p['party_id'][:6]}</b>
                   <span class="ess-badge ess-open">모집중</span><br>
-                  <span style="font-size:.8rem;color:#6B7280;">
+                  <span style="font-size:.8rem;color:#64748B;">
                     신청자 {cnt}명 | 생성: {p['created_at'][:10]}
                   </span>
                 </div>""", unsafe_allow_html=True)
