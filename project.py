@@ -4,7 +4,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from auth           import render_auth_page, render_my_page
-from wishlist_page  import render_wishlist_page
+from wishlist_page  import render_wishlist_page, validate_image_url
 from essentials_page import render_essentials_popup
 from user_store     import (initialize, get_lists, get_all_user_ids, get_list_type,
                              update_list_title, update_list_type, add_list_item,
@@ -209,7 +209,7 @@ def render_admin_editor(list_key: str, info: dict):
         for i, item in enumerate(info["items"]):
             c1,c2,c3,c4 = st.columns([3,4,2,1])
             with c1: new_label = st.text_input(f"이름#{i+1}", value=item["label"], key=f"lbl_{list_key}_{i}")
-            with c2: new_img   = st.text_input(f"URL#{i+1}",  value=item.get("image_url",""), key=f"img_{list_key}_{i}", placeholder="https://...")
+            with c2: new_img   = st.text_input(f"URL#{i+1}", value=item.get("image_url",""), key=f"img_{list_key}_{i}", placeholder="https://example.com/img.jpg")
             with c3:
                 old_p = int(item.get("price",0))
                 new_p = st.number_input(f"가격#{i+1}", value=old_p, min_value=0, step=100, key=f"price_{list_key}_{i}")
@@ -222,25 +222,34 @@ def render_admin_editor(list_key: str, info: dict):
                         push_all(all_uids,"item_deleted",f"'{removed['label']}' 항목이 삭제됐습니다.")
                     st.rerun()
             if st.button(f"저장#{i+1}", key=f"save_{list_key}_{i}"):
-                from notification_store import push_all
-                update_list_item(list_key, i, new_label, new_img, new_p)
-                if new_p != old_p:
-                    push_all(all_uids,"item_price_changed",
-                             f"'{new_label}' 가격이 {new_p:,}원으로 변경됐습니다.")
-                st.success("저장"); st.rerun()
+                img_err = validate_image_url(new_img)
+                if img_err:
+                    st.error(img_err)
+                else:
+                    from notification_store import push_all
+                    update_list_item(list_key, i, new_label, new_img, new_p)
+                    if new_p != old_p:
+                        push_all(all_uids,"item_price_changed",
+                                 f"'{new_label}' 가격이 {new_p:,}원으로 변경됐습니다.")
+                    st.success("저장"); st.rerun()
 
         st.divider()
         a1,a2,a3 = st.columns([3,4,2])
         with a1: add_label = st.text_input("이름", key=f"add_lbl_{list_key}", placeholder="항목 이름")
-        with a2: add_img   = st.text_input("URL",  key=f"add_img_{list_key}", placeholder="https://...")
+        with a2: add_img   = st.text_input("URL",  key=f"add_img_{list_key}", placeholder="https://example.com/img.jpg")
         with a3: add_price = st.number_input("가격", min_value=0, step=100, key=f"add_price_{list_key}")
         if st.button("＋ 항목 추가", key=f"add_btn_{list_key}", use_container_width=True):
-            if add_label.strip():
-                from notification_store import push_all
-                add_list_item(list_key, add_label, add_img, add_price)
-                push_all(get_all_user_ids(),"item_added",f"'{add_label}' 항목이 추가됐습니다.")
-                st.success("추가"); st.rerun()
-            else: st.warning("이름을 입력해 주세요.")
+            if not add_label.strip():
+                st.warning("이름을 입력해 주세요.")
+            else:
+                img_err = validate_image_url(add_img)
+                if img_err:
+                    st.error(img_err)
+                else:
+                    from notification_store import push_all
+                    add_list_item(list_key, add_label, add_img, add_price)
+                    push_all(get_all_user_ids(),"item_added",f"'{add_label}' 항목이 추가됐습니다.")
+                    st.success("추가"); st.rerun()
 
         st.divider()
         if st.button(f"🗑️ 이 리스트 삭제 ({info.get('title',list_key)})",
