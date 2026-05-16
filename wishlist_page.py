@@ -256,7 +256,7 @@ def render_wishlist_page():
 
                 col_img, col_info = st.columns([1, 3])
                 with col_img:
-                    if item.get("image_url"):
+                    if item.get("image_url","").strip():
                         st.image(item["image_url"], width=80)
                     else:
                         st.markdown(
@@ -411,7 +411,7 @@ def render_wishlist_page():
                     s = status_map.get(item["status"], item["status"])
                     col_i, col_t, col_b = st.columns([1, 5, 1])
                     with col_i:
-                        if item.get("image_url"):
+                        if item.get("image_url","").strip():
                             st.image(item["image_url"], width=60)
                         else:
                             st.markdown("🎁")
