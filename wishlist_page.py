@@ -4,7 +4,8 @@ import re
 import streamlit as st
 import streamlit.components.v1 as components
 from roulette_store import (register_item, get_active_items, get_my_items,
-                             get_item, spin, has_spun, remove_item,
+                             get_item, get_all_items, spin, has_spun,
+                             remove_item, admin_remove_item,
                              SPIN_CREDIT_COST)
 from rating_store   import get_temperature
 from notification_store import push
@@ -233,7 +234,13 @@ def render_wishlist_page():
                   ("roulette_spinning", False)]:
         if k not in st.session_state: st.session_state[k] = v
 
-    rt1, rt2 = st.tabs(["🎁 상품 목록", "📦 내 상품 관리"])
+    is_admin = st.session_state.get("user", {}).get("is_admin", False)
+
+    if is_admin:
+        rt1, rt2, rt3 = st.tabs(["🎁 상품 목록", "📦 내 상품 관리", "🛡️ 관리자"])
+    else:
+        rt1, rt2 = st.tabs(["🎁 상품 목록", "📦 내 상품 관리"])
+        rt3 = None
 
     # ── 상품 목록 ─────────────────────────────────────────────────────────
     with rt1:
@@ -357,27 +364,19 @@ def render_wishlist_page():
     # ── 내 상품 관리 ──────────────────────────────────────────────────────
     with rt2:
         st.markdown("**내 등록 상품**")
-        my_items   = get_my_items(uid)
-        status_map = {"active": "🟢 등록중", "won": "🏆 당첨됨", "removed": "❌ 삭제됨"}
+        my_items    = get_my_items(uid)
+        # active 상품만 표시 (won·removed 자동 제외)
         active_mine = [i for i in my_items if i["status"] == "active"]
-        ended_mine  = [i for i in my_items if i["status"] in ("won", "removed")]
 
-        if not active_mine and not ended_mine:
-            st.info("등록한 상품이 없습니다.")
-
-        for item in active_mine:
-            st.markdown(f"**{item['item_name']}** — 🟢 등록중 | 시도 {item['spin_count']}회")
-            st.caption(item["item_desc"])
-            if st.button("삭제", key=f"rm_roulette_{item['roulette_id']}"):
-                remove_item(item["roulette_id"], uid); st.rerun()
-            st.divider()
-
-        if ended_mine:
-            st.markdown("**종료된 상품**")
-            for item in ended_mine:
-                st.markdown(
-                    f"~~{item['item_name']}~~ — "
-                    f"{status_map.get(item['status'],'')} | 시도 {item['spin_count']}회")
+        if not active_mine:
+            st.info("등록 중인 상품이 없습니다.")
+        else:
+            for item in active_mine:
+                st.markdown(f"**{item['item_name']}** — 🟢 등록중 | 시도 {item['spin_count']}회")
+                st.caption(item["item_desc"])
+                if st.button("삭제", key=f"rm_roulette_{item['roulette_id']}"):
+                    remove_item(item["roulette_id"], uid); st.rerun()
+                st.divider()
 
         st.markdown("---")
         st.markdown("**➕ 새 상품 등록**")
@@ -398,3 +397,36 @@ def render_wishlist_page():
                 register_item(uid, uname, temp, r_name.strip(),
                               r_desc.strip(), r_contact, r_img.strip())
                 st.success("상품이 등록됐습니다!"); st.rerun()
+
+    # ── 관리자 탭 ─────────────────────────────────────────────────────────
+    if rt3 is not None:
+        with rt3:
+            st.markdown("**🛡️ 전체 룰렛 상품 관리**")
+            all_items = get_all_items()
+            status_map = {"active": "🟢 등록중", "won": "🏆 당첨됨", "removed": "❌ 삭제됨"}
+
+            if not all_items:
+                st.info("등록된 상품이 없습니다.")
+            else:
+                for item in sorted(all_items,
+                                   key=lambda x: x["created_at"], reverse=True):
+                    s = status_map.get(item["status"], item["status"])
+                    col_i, col_t, col_b = st.columns([1, 5, 1])
+                    with col_i:
+                        if item.get("image_url"):
+                            st.image(item["image_url"], width=60)
+                        else:
+                            st.markdown("🎁")
+                    with col_t:
+                        st.markdown(f"**{item['item_name']}** {s}")
+                        st.caption(
+                            f"등록자: {item['owner_name']} | "
+                            f"시도: {item['spin_count']}회 | "
+                            f"{item['created_at'][:10]}")
+                    with col_b:
+                        if item["status"] == "active":
+                            if st.button("🗑️", key=f"admin_rm_{item['roulette_id']}",
+                                         help="강제 삭제"):
+                                admin_remove_item(item["roulette_id"])
+                                st.success("삭제됐습니다."); st.rerun()
+                    st.divider()
