@@ -16,10 +16,9 @@ initialize()
 
 st.set_page_config(page_title="My App", layout="wide", initial_sidebar_state="collapsed")
 
-if "page" not in st.session_state:
-    st.session_state.page = "main"
-if "pot_modal_item" not in st.session_state:
-    st.session_state.pot_modal_item = None
+if "page"           not in st.session_state: st.session_state.page           = "main"
+if "pot_modal_item" not in st.session_state: st.session_state.pot_modal_item = None
+if "pot_sub"        not in st.session_state: st.session_state.pot_sub        = "main"
 
 # ── 전역 CSS ──────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -39,10 +38,20 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .logo-text { font-family:'DM Serif Display',serif; font-size:2rem; color:#1a1a1a; }
 
-/* 관리자 편집 패널 */
-.admin-label {
-    font-size:0.72rem; font-weight:700; color:#D97706;
-    letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.6rem;
+/* 카드 그리드 */
+.card-scroll-wrap {
+    display:flex; gap:1.2rem; overflow-x:auto;
+    background:#EDEBE5; border-radius:14px;
+    padding:1.2rem; border:1.5px solid #D8D4CB;
+    margin-bottom:0.5rem;
+}
+.card-scroll-wrap::-webkit-scrollbar { height:4px; }
+.card-scroll-wrap::-webkit-scrollbar-thumb { background:#C2BEAF; border-radius:4px; }
+
+/* 카드 클릭 버튼 행 */
+.card-btn-row {
+    display:flex; gap:1.2rem; overflow-x:auto;
+    padding:0 0 0.5rem 0; margin-bottom:1.6rem;
 }
 
 /* 하단 네비바 */
@@ -78,156 +87,132 @@ section.main > div.block-container > div:last-child
 </style>
 """, unsafe_allow_html=True)
 
-# ── 상단 헤더 ─────────────────────────────────────────────────────────────────
 st.markdown('<div class="top-header"><span class="logo-text">My App</span></div>', unsafe_allow_html=True)
 
 
-# ── 카드 슬라이더 렌더 (클릭 가능 — 버튼 방식) ──────────────────────────────
+# ── 카드 섹션 렌더 (이미지 썸네일 + 클릭 버튼) ───────────────────────────────
 def render_card_section(title: str, items: list, list_key: str):
-    """
-    카드를 Streamlit 버튼 그리드로 렌더링.
-    클릭하면 pot_modal_item에 item을 저장하고 rerun → 팝업 표시.
-    """
-    # 제목
-    st.markdown(f"""
-    <p style="font-size:1.0rem;font-weight:600;color:#1a1a1a;
-       letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem;">
-       {title}
-    </p>""", unsafe_allow_html=True)
+    # 섹션 타이틀
+    st.markdown(
+        f'<p style="font-size:1rem;font-weight:600;color:#1a1a1a;'
+        f'letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem;">{title}</p>',
+        unsafe_allow_html=True,
+    )
 
-    # 카드를 가로 스크롤 미리보기로 보여주고, 아래에 클릭 버튼 나열
-    # → components.html로 썸네일 + 버튼으로 각 카드 표현
-    card_btns_html = ""
-    for i, item in enumerate(items):
-        label = item.get("label","")
-        img   = item.get("image_url","")
+    # 카드 이미지 썸네일 슬라이더 (components.html — 클릭 없이 시각만)
+    cards_html = ""
+    for item in items:
+        label = item.get("label", "")
+        img   = item.get("image_url", "")
+        price = item.get("price", 0)
         bg    = f"url('{img}') center/cover no-repeat" if img else "linear-gradient(135deg,#EEF4FF,#DBEAFE)"
-        card_btns_html += f"""
-        <div class="card" onclick="selectCard({i})" title="{label}">
+        price_tag = f'<span class="card-price">{price:,}원</span>' if price else ""
+        cards_html += f"""
+        <div class="card">
           <div class="card-img" style="background:{bg};"></div>
+          {price_tag}
           <span class="card-label">{label}</span>
         </div>"""
 
-    # 선택 인덱스를 Streamlit에 전달하는 hidden input trick
     components.html(f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
   *{{box-sizing:border-box;margin:0;padding:0;}}
-  body{{background:transparent;font-family:'DM Sans',sans-serif;padding:0 0 6px 0;}}
+  body{{background:transparent;font-family:'DM Sans',sans-serif;padding:0 0 4px 0;}}
   .card-row{{display:flex;gap:1.2rem;overflow-x:auto;background:#EDEBE5;
     border-radius:14px;padding:1.2rem;border:1.5px solid #D8D4CB;}}
   .card-row::-webkit-scrollbar{{height:4px;}}
   .card-row::-webkit-scrollbar-thumb{{background:#C2BEAF;border-radius:4px;}}
   .card{{flex:0 0 200px;height:220px;border-radius:12px;border:2px solid #3B82F6;
     background:#fff;display:flex;flex-direction:column;align-items:center;
-    justify-content:flex-end;padding-bottom:1rem;cursor:pointer;
-    transition:transform 0.18s,box-shadow 0.18s;position:relative;overflow:hidden;}}
-  .card:hover{{transform:translateY(-4px);box-shadow:0 10px 28px rgba(59,130,246,0.18);border-color:#1D4ED8;}}
+    justify-content:flex-end;padding-bottom:0.8rem;
+    position:relative;overflow:hidden;}}
   .card-img{{position:absolute;inset:0;}}
+  .card-price{{position:absolute;top:8px;right:8px;font-size:0.68rem;font-weight:700;
+    color:#fff;background:rgba(59,130,246,0.85);padding:0.15rem 0.55rem;
+    border-radius:20px;}}
   .card-label{{position:relative;font-size:0.78rem;font-weight:600;color:#3B82F6;
-    letter-spacing:0.04em;background:rgba(255,255,255,0.85);
+    letter-spacing:0.04em;background:rgba(255,255,255,0.88);
     padding:0.25rem 0.7rem;border-radius:20px;}}
 </style></head><body>
-<div class="card-row">{card_btns_html}</div>
-<script>
-  function selectCard(idx){{
-    // 부모 window로 카드 인덱스 전달
-    window.parent.postMessage({{type:'CARD_CLICK', listKey:'{list_key}', idx:idx}}, '*');
-  }}
-</script>
-</body></html>""", height=290, scrolling=False)
+<div class="card-row">{cards_html}</div>
+</body></html>""", height=270, scrolling=False)
 
-    # postMessage를 받아 session_state에 저장하는 JS 브릿지
-    st.markdown(f"""
-    <script>
-    (function(){{
-      if(window._cardListenerAdded_{list_key}) return;
-      window._cardListenerAdded_{list_key} = true;
-      window.addEventListener('message', function(e){{
-        if(e.data && e.data.type === 'CARD_CLICK' && e.data.listKey === '{list_key}'){{
-          // Streamlit query param으로 선택 정보 전달 후 rerun
-          var url = new URL(window.location.href);
-          url.searchParams.set('card_list', e.data.listKey);
-          url.searchParams.set('card_idx', e.data.idx);
-          window.location.href = url.toString();
-        }}
-      }});
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
+    # ── 클릭 버튼 행 (Streamlit 버튼 — 확실하게 작동) ──────────────────
+    cols = st.columns(len(items))
+    for i, (col, item) in enumerate(zip(cols, items)):
+        with col:
+            label = item.get("label", f"Item {i+1}")
+            if st.button(f"🛒 {label}", key=f"card_{list_key}_{i}", use_container_width=True):
+                st.session_state.pot_modal_item = item
+                st.session_state.pot_sub = "main"
+                st.rerun()
+
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
 
-# ── 쿼리 파라미터로 카드 선택 처리 ──────────────────────────────────────────
-params = st.query_params
-if "card_list" in params and "card_idx" in params and st.session_state.pot_modal_item is None:
-    try:
-        sel_list = params["card_list"]
-        sel_idx  = int(params["card_idx"])
-        lists    = get_lists()
-        items    = lists.get(sel_list, {}).get("items", [])
-        if 0 <= sel_idx < len(items):
-            st.session_state.pot_modal_item = items[sel_idx]
-            # 파라미터 제거
-            st.query_params.clear()
-            st.rerun()
-    except Exception:
-        pass
-
-
-# ── 관리자 편집 패널 ──────────────────────────────────────────────────────────
+# ── 관리자 편집 패널 (price 추가) ─────────────────────────────────────────────
 def render_admin_editor(list_key: str, info: dict):
-    title = info["title"]
-    items = info["items"]
-
     with st.expander(f"⚙️ [{list_key.upper()}] 편집 패널", expanded=False):
-        st.markdown('<div class="admin-label">🛡️ 관리자 편집 모드</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<p style="font-size:0.72rem;font-weight:700;color:#D97706;'
+            'letter-spacing:0.08em;text-transform:uppercase;">🛡️ 관리자 편집 모드</p>',
+            unsafe_allow_html=True,
+        )
 
+        # 제목
         st.markdown("**리스트 제목**")
-        new_title = st.text_input("제목", value=title, key=f"title_{list_key}", label_visibility="collapsed")
+        new_title = st.text_input("제목", value=info["title"], key=f"title_{list_key}", label_visibility="collapsed")
         if st.button("제목 저장", key=f"save_title_{list_key}"):
             update_list_title(list_key, new_title)
-            st.success("제목 저장 완료")
-            st.rerun()
+            st.success("저장 완료"); st.rerun()
 
         st.divider()
         st.markdown("**항목 관리**")
 
-        for i, item in enumerate(items):
-            c1, c2, c3 = st.columns([3, 5, 1])
+        for i, item in enumerate(info["items"]):
+            c1, c2, c3, c4 = st.columns([3, 4, 2, 1])
             with c1:
                 new_label = st.text_input(f"이름 #{i+1}", value=item["label"], key=f"lbl_{list_key}_{i}")
             with c2:
                 new_img = st.text_input(f"이미지 URL #{i+1}", value=item.get("image_url",""),
                                         key=f"img_{list_key}_{i}", placeholder="https://...")
             with c3:
+                new_price = st.number_input(f"가격 #{i+1} (원)", value=int(item.get("price",0)),
+                                            min_value=0, step=100, key=f"price_{list_key}_{i}")
+            with c4:
                 st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_{list_key}_{i}"):
                     delete_list_item(list_key, i); st.rerun()
+
             if st.button(f"저장 #{i+1}", key=f"save_{list_key}_{i}"):
-                update_list_item(list_key, i, new_label, new_img)
+                update_list_item(list_key, i, new_label, new_img, new_price)
                 st.success(f"항목 {i+1} 저장"); st.rerun()
 
         st.divider()
         st.markdown("**새 항목 추가**")
-        ac1, ac2 = st.columns([3, 5])
-        with ac1:
+        a1, a2, a3 = st.columns([3, 4, 2])
+        with a1:
             add_label = st.text_input("이름", key=f"add_lbl_{list_key}", placeholder="항목 이름")
-        with ac2:
+        with a2:
             add_img = st.text_input("이미지 URL", key=f"add_img_{list_key}", placeholder="https://...")
+        with a3:
+            add_price = st.number_input("가격 (원)", min_value=0, step=100, key=f"add_price_{list_key}")
+
         if st.button("＋ 항목 추가", key=f"add_btn_{list_key}", use_container_width=True):
             if add_label.strip():
-                add_list_item(list_key, add_label, add_img); st.rerun()
+                add_list_item(list_key, add_label, add_img, add_price)
+                st.success("추가 완료"); st.rerun()
             else:
                 st.warning("이름을 입력해 주세요.")
 
 
-# ── 팝업이 열려 있으면 팝업만 표시 ──────────────────────────────────────────
+# ── 팝업 열려 있으면 팝업만 표시 ─────────────────────────────────────────────
 if st.session_state.pot_modal_item is not None:
     render_item_popup(st.session_state.pot_modal_item)
 
 else:
-    # ── 일반 페이지 콘텐츠 ────────────────────────────────────────────────
     page         = st.session_state.page
     is_logged_in = "user" in st.session_state
     is_admin     = st.session_state.get("user", {}).get("is_admin", False)
@@ -235,15 +220,10 @@ else:
     if page == "main":
         lists = get_lists()
         for key in ("list1", "list2"):
-            info  = lists.get(key, {})
-            title = info.get("title", key)
-            items = info.get("items", [])
-
+            info = lists.get(key, {})
             if is_admin:
                 render_admin_editor(key, info)
-
-            render_card_section(title, items, key)
-            st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+            render_card_section(info.get("title", key), info.get("items", []), key)
 
     elif page == "wishlist":
         st.markdown('<p style="font-size:1.05rem;font-weight:600;letter-spacing:0.06em;'
