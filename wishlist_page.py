@@ -127,20 +127,19 @@ def _account_input(key_prefix):
 
 def _roulette_anim_html(is_win: bool, item_image: str = "") -> str:
     """
-    is_win=True  → 실제 상품 이미지(또는 🎁)가 당첨 칸에 표시
-    is_win=False → 꽝 칸에 멈춤
-    룰렛 회전 결과와 이미지가 일치하도록 stopIdx를 제어.
+    당첨 → 모든 칸이 당첨 이모지/금색
+    꽝   → 모든 칸이 꽝 이모지/회색·빨강
+    어느 칸에 멈춰도 결과와 시각이 일치.
     """
-    win_js    = "true" if is_win else "false"
-    img_html  = f'<img src="{item_image}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">' if item_image else "🎁"
+    win_js = "true" if is_win else "false"
+    safe_img = item_image.replace('"', '').replace("'", "") if item_image else ""
 
     return f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
 body{{background:transparent;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;height:300px;
-  font-family:sans-serif;}}
+  align-items:center;justify-content:center;height:300px;font-family:sans-serif;}}
 #wrap{{position:relative;width:220px;height:220px;}}
 canvas{{border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,.2);}}
 #ptr{{position:absolute;top:-20px;left:50%;transform:translateX(-50%);
@@ -154,70 +153,81 @@ canvas{{border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,.2);}}
 </div>
 <div id="msg">🎰 돌아가는 중...</div>
 <script>
-// 세그먼트 0 = 당첨(상품), 1~19 = 꽝
-var LABELS=['🎁 당첨','😢 꽝','😅 꽝','🥲 꽝','💀 꽝',
-            '😵 꽝','🤦 꽝','😭 꽝','🙈 꽝','😤 꽝',
-            '🫠 꽝','🤡 꽝','😾 꽝','😩 꽝','🤯 꽝',
-            '😬 꽝','🥴 꽝','🫥 꽝','🫣 꽝','😱 꽝'];
-var COLS=['#3B82F6','#EF4444','#F59E0B','#10B981','#8B5CF6',
-          '#EC4899','#14B8A6','#F97316','#6366F1','#84CC16',
-          '#EF4444','#3B82F6','#F59E0B','#10B981','#8B5CF6',
-          '#EC4899','#14B8A6','#F97316','#6366F1','#84CC16'];
-var n=LABELS.length, arc=2*Math.PI/n;
-var cv=document.getElementById('c'), ctx=cv.getContext('2d');
+var isWin = {win_js};
+var n = 20, arc = 2*Math.PI/n;
+var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var cx=110, cy=110, r=104;
-var isWin={win_js};
 
-// 당첨 칸(index 0)에 상품 이미지 그리기
-var prodImg=null;
-var imgSrc="{item_image}";
-if(imgSrc){{
-  prodImg=new Image();
-  prodImg.crossOrigin='anonymous';
-  prodImg.src=imgSrc;
+// 당첨: 전 칸 당첨 이모지 + 금색
+var WIN_LABELS = ['🎁 당첨','🥳 당첨','🎉 당첨','✨ 당첨','🏆 당첨',
+                  '💰 당첨','🎊 당첨','⭐ 당첨','🌟 당첨','💎 당첨',
+                  '🎁 당첨','🥳 당첨','🎉 당첨','✨ 당첨','🏆 당첨',
+                  '💰 당첨','🎊 당첨','⭐ 당첨','🌟 당첨','💎 당첨'];
+var WIN_COLS   = ['#F59E0B','#FBBF24','#F59E0B','#D97706','#FBBF24',
+                  '#F59E0B','#FBBF24','#D97706','#F59E0B','#FBBF24',
+                  '#D97706','#F59E0B','#FBBF24','#F59E0B','#D97706',
+                  '#FBBF24','#F59E0B','#D97706','#FBBF24','#F59E0B'];
+
+// 꽝: 전 칸 꽝 이모지 + 회색/빨강
+var LOSE_LABELS = ['😢 꽝','💀 꽝','😅 꽝','🥲 꽝','😵 꽝',
+                   '🤦 꽝','😭 꽝','🙈 꽝','😤 꽝','🫠 꽝',
+                   '🤡 꽝','😾 꽝','😩 꽝','🤯 꽝','😬 꽝',
+                   '🥴 꽝','🫥 꽝','🫣 꽝','😱 꽝','💔 꽝'];
+var LOSE_COLS   = ['#EF4444','#6B7280','#EF4444','#9CA3AF','#EF4444',
+                   '#6B7280','#EF4444','#9CA3AF','#EF4444','#6B7280',
+                   '#EF4444','#9CA3AF','#EF4444','#6B7280','#EF4444',
+                   '#9CA3AF','#EF4444','#6B7280','#9CA3AF','#EF4444'];
+
+var LABELS = isWin ? WIN_LABELS : LOSE_LABELS;
+var COLS   = isWin ? WIN_COLS   : LOSE_COLS;
+
+// 상품 이미지 (당첨 시 첫 칸에 표시)
+var prodImg = null;
+if(isWin && "{safe_img}"){{
+  prodImg = new Image();
+  prodImg.crossOrigin = 'anonymous';
+  prodImg.src = "{safe_img}";
 }}
 
 function draw(angle){{
   ctx.clearRect(0,0,220,220);
   for(var i=0;i<n;i++){{
-    var s=angle+i*arc;
+    var s = angle + i*arc;
     ctx.beginPath(); ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,s,s+arc); ctx.closePath();
-    ctx.fillStyle=COLS[i]; ctx.fill();
+    ctx.fillStyle = COLS[i]; ctx.fill();
 
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(s+arc/2);
-
-    if(i===0 && prodImg && prodImg.complete && prodImg.naturalWidth>0){{
-      // 당첨 칸: 상품 이미지
-      var iw=28, ih=18;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(r-iw-6, -ih/2, iw, ih);
-      ctx.clip();
-      ctx.drawImage(prodImg, r-iw-6, -ih/2, iw, ih);
+    if(isWin && i===0 && prodImg && prodImg.complete && prodImg.naturalWidth>0){{
+      var iw=28,ih=18;
+      ctx.save(); ctx.beginPath();
+      ctx.rect(r-iw-6,-ih/2,iw,ih); ctx.clip();
+      ctx.drawImage(prodImg,r-iw-6,-ih/2,iw,ih);
       ctx.restore();
     }} else {{
       ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif';
       ctx.textAlign='right';
-      ctx.fillText(LABELS[i], r-6, 4);
+      ctx.fillText(LABELS[i],r-6,4);
     }}
     ctx.restore();
   }}
   // 중심원
   ctx.beginPath(); ctx.arc(cx,cy,22,0,2*Math.PI);
-  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.fillStyle = isWin ? '#FEF3C7' : '#F3F4F6';
+  ctx.fill();
   ctx.strokeStyle='#E5E7EB'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='14px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillText(isWin ? '🎁' : '😢', cx, cy+5);
 }}
 
 draw(0);
 
-// 당첨이면 index 0(당첨 칸)에 멈춤, 꽝이면 1~n-1 랜덤
-var stopIdx = isWin ? 0 : (Math.floor(Math.random()*(n-1))+1);
-var spins   = 6 + Math.random()*2;
-// 화살표(▼)가 12시 방향(0도)에서 stopIdx 칸을 가리키도록 역산
-// 칸 i의 중앙 각도: -(i*arc + arc/2) (반시계 회전 보정)
+// 어느 칸이든 같은 내용 → 랜덤 위치에 멈춰도 결과와 일치
+var stopIdx    = Math.floor(Math.random()*n);
+var spins      = 6 + Math.random()*2;
 var finalAngle = -(spins*2*Math.PI + stopIdx*arc + arc/2);
-var duration=5000, startTime=null;
+var duration   = 5000, startTime = null;
 
 function animate(ts){{
   if(!startTime) startTime=ts;
@@ -225,22 +235,14 @@ function animate(ts){{
   var ease=1-Math.pow(1-prog,4);
   draw(finalAngle*ease);
   if(prog<1){{ requestAnimationFrame(animate); }}
-  else{{
-    document.getElementById('msg').innerText =
-      isWin ? '🎉 당첨!!!' : '😢 꽝...';
-  }}
+  else{{ document.getElementById('msg').innerText=isWin?'🎉 당첨!!!':'😢 꽝...'; }}
 }}
 
-// 이미지 로드 후 애니메이션 시작
 if(prodImg && !prodImg.complete){{
-  prodImg.onload = function(){{ requestAnimationFrame(animate); }};
-  prodImg.onerror= function(){{ requestAnimationFrame(animate); }};
-}} else {{
-  requestAnimationFrame(animate);
-}}
+  prodImg.onload  = function(){{ requestAnimationFrame(animate); }};
+  prodImg.onerror = function(){{ requestAnimationFrame(animate); }};
+}} else {{ requestAnimationFrame(animate); }}
 </script></body></html>"""
-
-
 # ── 메인 렌더 ────────────────────────────────────────────────────────────────
 
 def render_wishlist_page():
