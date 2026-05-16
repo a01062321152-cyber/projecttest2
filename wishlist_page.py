@@ -104,26 +104,34 @@ def _account_input(key_prefix: str) -> tuple[str, str | None]:
     """
     은행 선택 + 숫자만 입력.
     Returns (formatted_account, error_or_None)
+    미입력·형식 불일치·은행 미선택 모두 error 반환.
     """
     bank = st.selectbox("은행", BANKS, key=f"{key_prefix}_bank")
     acc  = st.text_input("계좌번호 (숫자만)",
                           placeholder="예: 123456789012",
                           key=f"{key_prefix}_accnum")
 
-    # 숫자·하이픈 외 문자 실시간 경고
+    # 숫자·하이픈 외 문자 즉시 경고 + 자동 제거
     if acc and re.search(r'[^\d\-]', acc):
-        st.warning("계좌번호는 숫자만 입력해 주세요.")
-        acc = re.sub(r'[^\d]', '', acc)  # 숫자만 남기기
+        st.warning("계좌번호는 숫자(0-9)만 입력할 수 있습니다.")
+        acc = re.sub(r'[^\d]', '', acc)
 
+    # 에러 판정 (항상 명시적으로)
     if bank == "은행 선택":
         err = "은행을 선택해 주세요."
-    elif acc:
-        err = _validate_account_number(acc)
+    elif not acc:
+        err = "계좌번호를 입력해 주세요."
+    elif not re.fullmatch(r'\d+', acc):
+        err = "계좌번호는 숫자만 입력해 주세요."
+    elif len(acc) < 8:
+        err = "계좌번호가 너무 짧습니다. (최소 8자리)"
+    elif len(acc) > 16:
+        err = "계좌번호가 너무 깁니다. (최대 16자리)"
     else:
         err = None
 
     formatted = f"{bank} {acc}".strip() if bank != "은행 선택" else acc
-    if acc and err:
+    if err and (acc or bank != "은행 선택"):
         st.error(err)
     return formatted, err
 
@@ -319,8 +327,10 @@ def render_wishlist_page():
                         errs.append("출발 시간을 선택해 주세요.")
                     if contact_err or not contact:
                         errs.append(contact_err or "연락처를 입력해 주세요.")
-                    if account_err or not account or account.startswith("은행 선택"):
-                        errs.append(account_err or "계좌번호를 올바르게 입력해 주세요.")
+                    if account_err:
+                        errs.append(account_err)
+                    elif not account or account.strip() in ("", "은행 선택"):
+                        errs.append("계좌번호를 올바르게 입력해 주세요.")
 
                     if errs:
                         for e in errs: st.error(e)
