@@ -1,12 +1,12 @@
 """auth.py — 로그인 / 회원가입 / 마이페이지"""
 
 import streamlit as st
-
-from user_store         import register_user, login_user
-from rating_store       import get_temperature, get_score_count, temp_color, temp_label
+from user_store import (register_user, login_user, get_all_users,
+                         delete_user, get_credits, add_credits,
+                         set_credits, SCHOOLS)
+from rating_store import get_temperature, get_score_count, temp_color, temp_label
 from notification_store import push_all
-from essentials_store   import get_all_parties as ess_all
-from cvs_store          import get_parties_by_user as cvs_by_user, get_all_parties as cvs_all
+from essentials_store import get_all_parties as ess_all
 
 AUTH_CSS = """
 <style>
@@ -32,10 +32,14 @@ AUTH_CSS = """
 .temp-bar{height:100%;border-radius:20px;transition:width .4s;}
 .admin-pot-card{border:1.5px solid #E5E7EB;border-radius:12px;
   padding:.8rem 1rem;margin-bottom:.6rem;background:#FAFAFA;}
+.user-card{border:1.5px solid #E5E7EB;border-radius:12px;
+  padding:.8rem 1rem;margin-bottom:.6rem;background:#FAFAFA;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;}
+.credit-badge{display:inline-block;background:#FEF3C7;color:#D97706;
+  font-size:.72rem;font-weight:700;padding:.15rem .55rem;border-radius:20px;}
 </style>
 """
 
-# ── 비로그인 ──────────────────────────────────────────────────────────────────
 
 def render_auth_page():
     st.markdown(AUTH_CSS, unsafe_allow_html=True)
@@ -49,13 +53,13 @@ def render_auth_page():
           <p style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:#1a1a1a;margin-bottom:.3rem">My Page</p>
           <p style="font-size:.85rem;color:#9CA3AF;">로그인하거나 새 계정을 만들어 보세요</p>
         </div>""", unsafe_allow_html=True)
-        c1,c2 = st.columns(2)
+        c1, c2 = st.columns(2)
         with c1:
-            if st.button("🔑\n\n로그인",  use_container_width=True, key="go_login"):
-                st.session_state.auth_step="login"; st.rerun()
+            if st.button("🔑\n\n로그인", use_container_width=True, key="go_login"):
+                st.session_state.auth_step = "login"; st.rerun()
         with c2:
             if st.button("✏️\n\n회원가입", use_container_width=True, key="go_register"):
-                st.session_state.auth_step="register"; st.rerun()
+                st.session_state.auth_step = "register"; st.rerun()
         st.markdown("""<style>
         div[data-testid="stHorizontalBlock"]:not(:last-child) button{
           height:120px !important;font-size:1rem !important;border-radius:16px !important;
@@ -77,12 +81,14 @@ def render_auth_page():
         if ok_btn:
             ok, result = login_user(uid, pw)
             if ok:
-                st.session_state.user=result
-                st.session_state.auth_step="choice"
-                st.session_state.page="my"; st.rerun()
-            else: st.error(result)
+                st.session_state.user      = result
+                st.session_state.auth_step = "choice"
+                st.session_state.page      = "my"
+                st.rerun()
+            else:
+                st.error(result)
         if st.button("← 뒤로", key="back_login"):
-            st.session_state.auth_step="choice"; st.rerun()
+            st.session_state.auth_step = "choice"; st.rerun()
 
     elif step == "register":
         st.markdown("""<div class="auth-card">
@@ -93,24 +99,28 @@ def render_auth_page():
             name   = st.text_input("이름")
             uid    = st.text_input("아이디", placeholder="4자 이상")
             pw     = st.text_input("비밀번호", type="password", placeholder="6자 이상")
+            school = st.selectbox("학교", ["학교 선택"] + SCHOOLS)
             ok_btn = st.form_submit_button("계정 만들기", use_container_width=True)
         if ok_btn:
-            ok, msg = register_user(name, uid, pw)
+            sel_school = "" if school == "학교 선택" else school
+            ok, msg = register_user(name, uid, pw, sel_school)
             if ok:
-                st.success("회원가입 완료!"); st.session_state.auth_step="login"; st.rerun()
-            else: st.error(msg)
+                st.success("회원가입 완료!")
+                st.session_state.auth_step = "login"; st.rerun()
+            else:
+                st.error(msg)
         if st.button("← 뒤로", key="back_register"):
-            st.session_state.auth_step="choice"; st.rerun()
+            st.session_state.auth_step = "choice"; st.rerun()
 
-
-# ── 마이페이지 ────────────────────────────────────────────────────────────────
 
 def render_my_page():
     st.markdown(AUTH_CSS, unsafe_allow_html=True)
     user     = st.session_state.get("user", {})
-    name     = user.get("name","사용자")
-    uid      = user.get("user_id","")
+    name     = user.get("name", "사용자")
+    uid      = user.get("user_id", "")
     is_admin = user.get("is_admin", False)
+    school   = user.get("school", "")
+    credits  = get_credits(uid)
 
     badge = '<span class="admin-badge">ADMIN</span>' if is_admin else ""
     st.markdown(f"""
@@ -118,18 +128,18 @@ def render_my_page():
       <div class="profile-avatar">{"🛡️" if is_admin else "👤"}</div>
       <div>
         <div class="profile-name">{name}{badge}</div>
-        <div class="profile-id">@{uid}</div>
+        <div class="profile-id">@{uid}{f" · {school}" if school else ""}</div>
       </div>
     </div>""", unsafe_allow_html=True)
 
-    # 매너 온도 (일반 유저)
+    # 매너온도 + 크래딧 (일반 유저)
     if not is_admin:
         temp  = get_temperature(uid)
         cnt   = get_score_count(uid)
         color = temp_color(temp)
         lt    = temp_label(temp)
         st.markdown(f"""
-        <div style="margin-bottom:1.2rem;">
+        <div style="margin-bottom:.8rem;">
           <div style="font-size:.8rem;color:#6B7280;margin-bottom:.3rem;">
             🌡️ 매너 온도 &nbsp;
             <span style="font-weight:700;color:{color};font-size:1rem;">{temp}°</span>
@@ -140,78 +150,112 @@ def render_my_page():
             <div class="temp-bar" style="width:{temp}%;background:{color};"></div>
           </div>
         </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div style="margin-bottom:1.2rem;">'
+                    f'🪙 <b>보유 크래딧: {credits}</b></div>',
+                    unsafe_allow_html=True)
 
     if st.button("로그아웃", key="logout_btn"):
         st.session_state.pop("user", None)
-        st.session_state.page="my"; st.session_state.auth_step="choice"; st.rerun()
+        st.session_state.page = "my"
+        st.session_state.auth_step = "choice"
+        st.rerun()
 
-    # ── 관리자 전체 파티 현황 ─────────────────────────────────────────────
+    # ── 관리자 전용 ───────────────────────────────────────────────────────
     if is_admin:
-        st.markdown('<div class="mypage-section-title">🧴 생필품 파티 전체 현황</div>',
-                    unsafe_allow_html=True)
-        for p in ess_all():
-            s = "🟢 모집중" if p["status"]=="open" else "🔴 마감"
-            st.markdown(f"""
-            <div class="admin-pot-card">
-              <b>{p['item_label']}</b> {s} | 신청자 {len(p['applicants'])}명<br>
-              <span style="font-size:.78rem;color:#6B7280;">
-                개당 {p['price_per_unit']:,}원 | {p['created_at'][:10]}
-              </span>
-            </div>""", unsafe_allow_html=True)
-            if st.button("🗑️ 삭제", key=f"admin_ess_del_{p['party_id']}"):
-                from essentials_store import delete_party
-                delete_party(p["party_id"]); st.rerun()
+        admin_tab1, admin_tab2 = st.tabs(["🧴 생필품 파티 현황", "👥 회원 관리"])
 
-        st.markdown('<div class="mypage-section-title">🏪 편의점 파티 전체 현황</div>',
-                    unsafe_allow_html=True)
-        status_map = {"waiting":"🟡 대기","departed":"🚀 출발","arrived":"📍 집합"}
-        for p in cvs_all():
-            s = status_map.get(p["status"], p["status"])
-            st.markdown(f"""
-            <div class="admin-pot-card">
-              <b>{p['creator_name']}</b> {s} | 주문 {len(p['orders'])}건 |
-              출발 {p['depart_time']}<br>
-              <span style="font-size:.78rem;color:#6B7280;">{p['created_at'][:10]}</span>
-            </div>""", unsafe_allow_html=True)
-            if st.button("🗑️ 삭제", key=f"admin_cvs_del_{p['party_id']}"):
-                from cvs_store import delete_party
-                delete_party(p["party_id"]); st.rerun()
-        return
+        with admin_tab1:
+            st.markdown('<div class="mypage-section-title">🧴 생필품 파티 전체 현황</div>',
+                        unsafe_allow_html=True)
+            status_map = {"open": "🟢 모집중", "closed": "🟡 마감됨", "rated": "🟣 평가완료"}
+            for p in sorted(ess_all(), key=lambda x: x["created_at"], reverse=True):
+                s = status_map.get(p["status"], p["status"])
+                st.markdown(f"""
+                <div class="admin-pot-card">
+                  <b>{p['item_label']}</b> {s} | 신청자 {len(p['applicants'])}명<br>
+                  <span style="font-size:.78rem;color:#6B7280;">
+                    개당 {p['price_per_unit']:,}원 | {p['created_at'][:10]}
+                  </span>
+                </div>""", unsafe_allow_html=True)
+                if p["status"] in ("open",):
+                    if st.button("🗑️ 삭제", key=f"admin_ess_del_{p['party_id']}"):
+                        from essentials_store import delete_party
+                        delete_party(p["party_id"]); st.rerun()
+
+        with admin_tab2:
+            st.markdown('<div class="mypage-section-title">👥 회원 관리</div>',
+                        unsafe_allow_html=True)
+            all_users = [u for u in get_all_users() if not u.get("is_admin")]
+
+            if not all_users:
+                st.info("가입된 회원이 없습니다.")
+            else:
+                for u in all_users:
+                    u_id     = u["user_id"]
+                    u_name   = u["name"]
+                    u_school = u.get("school", "")
+                    u_cred   = u.get("credits", 0)
+                    u_temp   = get_temperature(u_id)
+                    u_cnt    = get_score_count(u_id)
+
+                    with st.expander(
+                        f"👤 {u_name} (@{u_id}) | {u_school} | "
+                        f"🌡️{u_temp}° | 🪙{u_cred}",
+                        expanded=False):
+
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.markdown(f"**매너 온도:** {u_temp}° ({u_cnt}회 평가)")
+                        with c2:
+                            st.markdown(f"**보유 크래딧:** {u_cred}")
+
+                        # 크래딧 직접 조정
+                        st.markdown("**크래딧 조정**")
+                        adj_cols = st.columns([3, 1, 1])
+                        with adj_cols[0]:
+                            new_cr = st.number_input("새 크래딧 값", min_value=0,
+                                                      value=u_cred, step=10,
+                                                      key=f"cr_{u_id}")
+                        with adj_cols[1]:
+                            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                            if st.button("저장", key=f"cr_save_{u_id}"):
+                                set_credits(u_id, new_cr)
+                                st.success("크래딧 저장됨"); st.rerun()
+                        with adj_cols[2]:
+                            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                            if st.button("➕10", key=f"cr_add_{u_id}"):
+                                add_credits(u_id, 10)
+                                st.rerun()
+
+                        # 탈퇴 처리
+                        st.markdown("---")
+                        if st.button(f"🗑️ {u_name} 탈퇴 처리",
+                                     key=f"del_user_{u_id}",
+                                     type="secondary"):
+                            delete_user(u_id)
+                            push_all([u_id], "pot_disbanded",
+                                     "계정이 관리자에 의해 탈퇴 처리됐습니다.")
+                            st.success(f"@{u_id} 탈퇴 처리 완료"); st.rerun()
+
+        return  # 관리자 마이페이지 끝
 
     # ── 일반 유저: 내 생필품 신청 내역 ───────────────────────────────────
     st.markdown('<div class="mypage-section-title">🧴 내 생필품 신청</div>',
                 unsafe_allow_html=True)
     my_ess = [p for p in ess_all()
-              if any(a["user_id"]==uid for a in p["applicants"])]
+              if any(a["user_id"] == uid for a in p["applicants"])]
     if not my_ess:
         st.info("신청한 생필품 파티가 없습니다.")
     else:
+        status_map = {"open": "🟢 모집중", "closed": "🟡 마감됨", "rated": "🟣 완료"}
         for p in my_ess:
-            my_app = next(a for a in p["applicants"] if a["user_id"]==uid)
-            s = "🟢 모집중" if p["status"]=="open" else "✅ 마감"
+            my_app = next(a for a in p["applicants"] if a["user_id"] == uid)
+            s = status_map.get(p["status"], p["status"])
+            pay_txt = ""
+            if p["status"] in ("closed", "rated") and p.get("price_per_unit", 0) > 0:
+                amount = my_app["qty"] * p["price_per_unit"]
+                pay_txt = f"| 납부: {amount:,}원 → {p.get('payment_dest', '')}"
             st.markdown(f"""
             <div class="admin-pot-card">
-              <b>{p['item_label']}</b> {s} | 내 신청: {my_app['qty']}개
-              {f"| 납부: {my_app['qty']*p['price_per_unit']:,}원" if p['status']=='closed' else ''}
-              {f"| 송금처: {p['payment_dest']}" if p['status']=='closed' else ''}
-            </div>""", unsafe_allow_html=True)
-
-    # ── 내 편의점 파티 내역 ───────────────────────────────────────────────
-    st.markdown('<div class="mypage-section-title">🏪 내 편의점 파티</div>',
-                unsafe_allow_html=True)
-    my_cvs = cvs_by_user(uid)
-    if not my_cvs:
-        st.info("참여 중인 편의점 파티가 없습니다.")
-    else:
-        for p in my_cvs:
-            is_creator = p["creator_id"] == uid
-            status_map2 = {"waiting":"🟡 대기중","departed":"🚀 출발","arrived":"📍 집합완료"}
-            s = status_map2.get(p["status"], p["status"])
-            my_orders = [o for o in p["orders"] if o["user_id"]==uid]
-            order_txt = ", ".join(f"{o['item_label']}×{o['qty']}" for o in my_orders)
-            st.markdown(f"""
-            <div class="admin-pot-card">
-              {'[파티장] ' if is_creator else ''}<b>{p['creator_name']}</b>의 파티 {s} |
-              출발 {p['depart_time']}<br>
-              {f"내 주문: {order_txt}" if order_txt else ""}
+              <b>{p['item_label']}</b> {s} | 내 신청: {my_app['qty']}개 {pay_txt}
             </div>""", unsafe_allow_html=True)
