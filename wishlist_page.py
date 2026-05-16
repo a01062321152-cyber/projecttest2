@@ -21,27 +21,18 @@ BANKS = [
 # ── URL 검증 ────────────────────────────────────────────────────────────────
 
 _URL_RE = re.compile(
-    r'^https?://'                        # http:// 또는 https://
-    r'[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}'   # 도메인
-    r'(/[^\s]*)?$',                      # 경로 (선택)
+    r'^https?://'
+    r'[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}'
+    r'(/[^\s]*)?$',
     re.IGNORECASE
 )
-_IMG_EXT = re.compile(
-    r'\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$', re.IGNORECASE)
 
 def validate_image_url(url: str) -> str | None:
-    """
-    이미지 URL 검증.
-    빈 문자열 → None (통과, 선택 항목)
-    형식 불일치 → 에러 메시지
-    """
     url = url.strip()
     if not url:
-        return None   # 선택 항목이므로 빈 값은 허용
+        return None  # 선택 항목이므로 빈 값 허용
     if not _URL_RE.match(url):
-        return "올바른 URL 형식이 아닙니다. (예: https://example.com/image.jpg)"
-    if not _IMG_EXT.search(url):
-        return "이미지 파일 URL이어야 합니다. (.jpg .jpeg .png .gif .webp .bmp .svg)"
+        return "http:// 또는 https://로 시작하는 올바른 URL을 입력해 주세요."
     return None
 
 
@@ -54,7 +45,7 @@ def image_url_input(label: str, key: str,
         st.error(err)
     elif url.strip() and not err:
         st.markdown(
-            f'<div style="font-size:.75rem;color:#2563EB;">✅ 유효한 이미지 URL</div>',
+            f'<div style="font-size:.75rem;color:#2563EB;">✅ 유효한 URL</div>',
             unsafe_allow_html=True)
     return url.strip(), err
 
