@@ -589,8 +589,16 @@ def render_wishlist_page():
                                     placeholder="예: 편의점 앞 공원 벤치",
                                 )
                                 st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다.")
-                                gather_lat, gather_lng = _map_pick_with_coords(
-                                    f"gather_{p['party_id']}", height=390)
+                               gather_lat, gather_lng = _map_pick_with_coords(
+    f"gather_{p['party_id']}",
+    height=390,
+    initial_lat=float(
+        p.get("gather_lat", 37.5665)
+    ),
+    initial_lng=float(
+        p.get("gather_lng", 126.9780)
+    ),
+)
 
                                 if st.button("📍 위치 전송",
                                              key=f"cvs_gather_{p['party_id']}",
