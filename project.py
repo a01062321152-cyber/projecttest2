@@ -166,7 +166,7 @@ notif_icon = f"🔔({notif_cnt})" if notif_cnt > 0 else "🔔"
 
 h1, h2 = st.columns([9,1])
 with h1:
-    st.markdown('<div class="top-header"><span class="logo-text">구메</span></div>',
+    st.markdown('<div class="top-header"><span class="logo-text">원박스</span></div>',
                 unsafe_allow_html=True)
 with h2:
     st.markdown("<div style='height:1.3rem'></div>", unsafe_allow_html=True)
