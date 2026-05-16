@@ -159,6 +159,7 @@ def render_essentials_popup(item: dict):
                   <span class="ess-badge ess-open">모집중</span><br>
                   <span style="font-size:.8rem;color:#64748B;">
                     신청자 {cnt}명 | 생성: {p['created_at'][:10]}
+                    | 📅 마감: {p.get('deadline', '-')}
                   </span>
                 </div>""", unsafe_allow_html=True)
 
@@ -223,6 +224,8 @@ def render_essentials_popup(item: dict):
         applicants = p["applicants"]
         total_qty  = sum(a["qty"] for a in applicants)
         st.markdown(f"**총 신청자: {len(applicants)}명 / 총 수량: {total_qty}개**")
+        if p.get("deadline"):
+            st.caption(f"📅 마감일: {p['deadline']}")
 
         for a in applicants:
             st.markdown(f"""
@@ -328,3 +331,4 @@ def render_essentials_popup(item: dict):
                 if st.button("🗑️ 파티 삭제", key="ess_del_party"):
                     delete_party(p["party_id"])
                     st.session_state.ess_sub = "main"; st.rerun()
+                  
