@@ -285,4 +285,5 @@ def render_my_page():
             st.markdown(f"""
             <div class="admin-pot-card">
               <b>{p['item_label']}</b> {s} | 내 신청: {my_app['qty']}개 {pay_txt}
+              {f"| 📅 마감: {p['deadline']}" if p.get('deadline') else ""}
             </div>""", unsafe_allow_html=True)
