@@ -270,9 +270,7 @@ def render_wishlist_page():
                     st.caption(item["item_desc"])
                     st.markdown(f"등록자: {item['owner_name']} | 현재 확률: **1/{prob}**")
 
-                    if spun:
-                        st.warning("이미 참여한 상품입니다.")
-                    elif temp < 50:
+                    if temp < 50:
                         st.warning(f"매너 온도 50° 이상만 참여 가능 (현재 {temp}°)")
                     elif credits < SPIN_CREDIT_COST:
                         st.warning(f"크래딧이 부족합니다. (필요: {SPIN_CREDIT_COST}, 보유: {credits})")
