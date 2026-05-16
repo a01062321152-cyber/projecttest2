@@ -23,6 +23,22 @@ for k, v in [("page","main"),("pot_modal_item",None),("pot_sub","main"),
     if k not in st.session_state:
         st.session_state[k] = v
 
+# ── 카드 클릭 query_params 처리 (페이지 최상단에서 실행) ─────────────────────
+_qp = st.query_params
+if "_card_list" in _qp and "_card_idx" in _qp and st.session_state.pot_modal_item is None:
+    try:
+        _sel_list = _qp["_card_list"]
+        _sel_idx  = int(_qp["_card_idx"])
+        _all = get_lists()
+        _items = _all.get(_sel_list, {}).get("items", [])
+        if 0 <= _sel_idx < len(_items):
+            st.session_state.pot_modal_item = _items[_sel_idx]
+            st.session_state.pot_sub = "main"
+        st.query_params.clear()
+        st.rerun()
+    except Exception:
+        st.query_params.clear()
+
 # ── 전역 CSS ──────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -128,8 +144,9 @@ if st.session_state.show_notif and is_logged_in:
 # ── 카드 섹션 렌더 ────────────────────────────────────────────────────────────
 def render_card_section(title: str, items: list, list_key: str):
     """
-    카드 썸네일(components.html) + 바로 아래 동일 너비 구메팟 버튼(Streamlit).
-    카드와 버튼이 1:1로 같은 너비로 정렬됨.
+    카드 + 버튼을 하나의 components.html 안에 통합.
+    버튼이 각 카드 바로 아래에 같은 너비로 붙어서 같이 스크롤됨.
+    클릭 → query_params → Streamlit rerun → 팝업 오픈.
     """
     st.markdown(
         f'<p style="font-size:1rem;font-weight:600;color:#1a1a1a;'
@@ -141,54 +158,130 @@ def render_card_section(title: str, items: list, list_key: str):
         st.caption("항목이 없습니다.")
         return
 
-    # ── 카드 썸네일 슬라이더 ──────────────────────────────────────────────
-    cards_html = ""
-    for item in items:
+    # 아이템 데이터를 JS에 넘길 JSON
+    import json as _json
+    items_json = _json.dumps(
+        [{"label": it.get("label",""), "image_url": it.get("image_url",""),
+          "price": it.get("price", 0)} for it in items],
+        ensure_ascii=False)
+
+    columns_html = ""
+    for i, item in enumerate(items):
         label = item.get("label", "")
         img   = item.get("image_url", "")
         price = item.get("price", 0)
         bg    = f"url('{img}') center/cover no-repeat" if img else "linear-gradient(135deg,#EEF4FF,#DBEAFE)"
         ptag  = f'<span class="card-price">{price:,}원</span>' if price else ""
-        cards_html += (f'<div class="card">'
-                       f'<div class="card-img" style="background:{bg};"></div>'
-                       f'{ptag}<span class="card-label">{label}</span></div>')
+        columns_html += f"""
+        <div class="col-wrap">
+          <div class="card">
+            <div class="card-img" style="background:{bg};"></div>
+            {ptag}
+            <span class="card-label">{label}</span>
+          </div>
+          <button class="pot-btn" onclick="selectItem({i})">🛒 {label}</button>
+        </div>"""
 
     components.html(f"""<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
-body{{background:transparent;font-family:'DM Sans',sans-serif;padding:0 0 2px 0;}}
-.card-row{{display:flex;gap:1.2rem;overflow-x:auto;background:#EDEBE5;
-  border-radius:14px;padding:1.2rem;border:1.5px solid #D8D4CB;}}
-.card-row::-webkit-scrollbar{{height:4px;}}
-.card-row::-webkit-scrollbar-thumb{{background:#C2BEAF;border-radius:4px;}}
-.card{{flex:0 0 200px;height:220px;border-radius:12px;border:2px solid #3B82F6;
-  background:#fff;display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-end;padding-bottom:.8rem;position:relative;overflow:hidden;}}
+body{{background:transparent;font-family:'DM Sans',sans-serif;padding:0 0 6px 0;}}
+
+/* 가로 스크롤 래퍼 */
+.scroll-wrap{{
+  display:flex;
+  gap:1.2rem;
+  overflow-x:auto;
+  background:#EDEBE5;
+  border-radius:14px;
+  padding:1.2rem 1.2rem 1rem;
+  border:1.5px solid #D8D4CB;
+}}
+.scroll-wrap::-webkit-scrollbar{{height:4px;}}
+.scroll-wrap::-webkit-scrollbar-thumb{{background:#C2BEAF;border-radius:4px;}}
+
+/* 카드 + 버튼을 세로로 묶는 컬럼 */
+.col-wrap{{
+  display:flex;
+  flex-direction:column;
+  flex:0 0 200px;
+  gap:8px;
+}}
+
+/* 카드 */
+.card{{
+  width:200px;
+  height:220px;
+  border-radius:12px;
+  border:2px solid #3B82F6;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  padding-bottom:.8rem;
+  position:relative;
+  overflow:hidden;
+  cursor:default;
+  transition:transform .18s,box-shadow .18s;
+}}
+.card:hover{{transform:translateY(-4px);box-shadow:0 10px 28px rgba(59,130,246,.18);}}
 .card-img{{position:absolute;inset:0;}}
-.card-price{{position:absolute;top:8px;right:8px;font-size:.68rem;font-weight:700;
-  color:#fff;background:rgba(59,130,246,.85);padding:.15rem .55rem;border-radius:20px;}}
-.card-label{{position:relative;font-size:.78rem;font-weight:600;color:#3B82F6;
+.card-price{{
+  position:absolute;top:8px;right:8px;
+  font-size:.68rem;font-weight:700;color:#fff;
+  background:rgba(59,130,246,.85);padding:.15rem .55rem;border-radius:20px;
+}}
+.card-label{{
+  position:relative;font-size:.78rem;font-weight:600;color:#3B82F6;
   letter-spacing:.04em;background:rgba(255,255,255,.88);
-  padding:.25rem .7rem;border-radius:20px;}}
-</style></head><body>
-<div class="card-row">{cards_html}</div>
-</body></html>""", height=265, scrolling=False)
+  padding:.25rem .7rem;border-radius:20px;
+}}
 
-    # ── 구메팟 버튼: 카드와 동일 너비, 바로 아래 ─────────────────────────
-    # 카드가 200px 고정폭이므로 columns로 동일하게 나눔
-    cols = st.columns(n)
-    for i, (col, item) in enumerate(zip(cols, items)):
-        with col:
-            label = item.get("label", f"Item {i+1}")
-            if st.button(f"🛒 {label}", key=f"card_{list_key}_{i}",
-                         use_container_width=True):
-                st.session_state.pot_modal_item = item
-                st.session_state.pot_sub = "main"
-                st.rerun()
+/* 구메팟 버튼 */
+.pot-btn{{
+  width:100%;
+  padding:.55rem 0;
+  border-radius:10px;
+  border:1.5px solid #DBEAFE;
+  background:#fff;
+  color:#3B82F6;
+  font-family:'DM Sans',sans-serif;
+  font-size:.8rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .15s,border-color .15s,transform .15s;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}}
+.pot-btn:hover{{
+  background:#EFF6FF;
+  border-color:#3B82F6;
+  transform:translateY(-1px);
+}}
+.pot-btn:active{{transform:translateY(0);}}
+</style>
+</head><body>
+<div class="scroll-wrap">
+  {columns_html}
+</div>
+<script>
+var ITEMS = {items_json};
+var LIST_KEY = "{list_key}";
 
-    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
+function selectItem(idx) {{
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('_card_list', LIST_KEY);
+  url.searchParams.set('_card_idx',  idx);
+  window.parent.location.href = url.toString();
+}}
+</script>
+</body></html>""", height=320, scrolling=False)
+
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
 
 # ── 관리자 편집 패널 ──────────────────────────────────────────────────────────
