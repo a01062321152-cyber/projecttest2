@@ -8,7 +8,8 @@ from wishlist_page  import render_wishlist_page
 from essentials_page import render_essentials_popup
 from cvs_page       import render_cvs_popup
 from user_store     import (initialize, get_lists, get_all_user_ids, get_list_type,
-                             update_list_title, add_list_item, update_list_item, delete_list_item)
+                             update_list_title, add_list_item, update_list_item, delete_list_item,
+                             add_list, delete_list)
 from notification_store import (get_notifications, get_unread_count,
                                  mark_all_read, clear_notifications)
 
@@ -215,13 +216,24 @@ def render_admin_editor(list_key: str, info: dict):
         with a1: add_label = st.text_input("이름", key=f"add_lbl_{list_key}", placeholder="항목 이름")
         with a2: add_img   = st.text_input("URL",  key=f"add_img_{list_key}", placeholder="https://...")
         with a3: add_price = st.number_input("가격", min_value=0, step=100, key=f"add_price_{list_key}")
-        if st.button("＋ 추가", key=f"add_btn_{list_key}", use_container_width=True):
+        if st.button("＋ 항목 추가", key=f"add_btn_{list_key}", use_container_width=True):
             if add_label.strip():
                 from notification_store import push_all
                 add_list_item(list_key, add_label, add_img, add_price)
                 push_all(get_all_user_ids(),"item_added",f"'{add_label}' 항목이 추가됐습니다.")
                 st.success("추가"); st.rerun()
             else: st.warning("이름을 입력해 주세요.")
+
+        # list1·list2는 삭제 불가, 추가 리스트만 삭제 가능
+        if list_key not in ("list1","list2"):
+            st.divider()
+            if st.button(f"🗑️ 이 리스트 삭제 ({info.get('title',list_key)})",
+                         key=f"del_list_{list_key}", type="secondary"):
+                from notification_store import push_all
+                push_all(get_all_user_ids(),"item_deleted",
+                         f"리스트 '{info.get('title',list_key)}'이 삭제됐습니다.")
+                delete_list(list_key)
+                st.success("리스트 삭제 완료"); st.rerun()
 
 
 # ── 모달 팝업 ─────────────────────────────────────────────────────────────────
@@ -243,6 +255,30 @@ else:
                 render_admin_editor(list_key, info)
             render_card_section(info.get("title",list_key), info.get("items",[]),
                                  list_key, ltype)
+
+        # 관리자: 새 리스트 추가
+        if is_admin:
+            st.markdown("---")
+            st.markdown("**➕ 새 리스트 추가**")
+            nl1, nl2, nl3 = st.columns([4, 2, 2])
+            with nl1:
+                new_list_title = st.text_input("리스트 제목", key="new_list_title",
+                                                placeholder="예: 냉동식품")
+            with nl2:
+                new_list_type = st.selectbox("타입", ["essentials","cvs"],
+                                              format_func=lambda x: "🧴 생필품" if x=="essentials" else "🏪 편의점",
+                                              key="new_list_type")
+            with nl3:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("추가", key="add_list_btn", use_container_width=True):
+                    if new_list_title.strip():
+                        new_key = add_list(new_list_title, new_list_type)
+                        from notification_store import push_all
+                        push_all(get_all_user_ids(),"item_added",
+                                 f"새 리스트 '{new_list_title}'이 추가됐습니다.")
+                        st.success(f"리스트 추가 완료!"); st.rerun()
+                    else:
+                        st.warning("제목을 입력해 주세요.")
 
     elif page == "wishlist":
         render_wishlist_page()
