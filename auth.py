@@ -10,32 +10,39 @@ from essentials_store import get_all_parties as ess_all
 
 AUTH_CSS = """
 <style>
-.auth-card{background:#fff;border-radius:20px;padding:2.6rem 2.4rem 2.2rem;
+.auth-card{background:#FFFFFF;border-radius:20px;padding:2.6rem 2.4rem 2.2rem;
   max-width:440px;margin:3rem auto 0;
-  box-shadow:0 4px 32px rgba(0,0,0,.08);border:1px solid #E5E7EB;}
-.auth-title{font-family:'DM Serif Display',serif;font-size:1.7rem;color:#1a1a1a;margin-bottom:.3rem;}
-.auth-sub{font-size:.85rem;color:#9CA3AF;margin-bottom:1.8rem;}
-.profile-card{background:#fff;border-radius:20px;padding:2rem 2.4rem;
-  margin-bottom:1.2rem;box-shadow:0 4px 24px rgba(0,0,0,.06);border:1px solid #E5E7EB;
-  display:flex;align-items:center;gap:1.6rem;}
+  box-shadow:0 4px 32px rgba(37,99,235,.10);border:1.5px solid #BFDBFE;}
+.auth-title{font-family:'DM Serif Display',serif;font-size:1.7rem;
+  color:#0F172A;margin-bottom:.3rem;}
+.auth-sub{font-size:.85rem;color:#94A3B8;margin-bottom:1.8rem;}
+.profile-card{background:#FFFFFF;border-radius:20px;padding:2rem 2.4rem;
+  margin-bottom:1.2rem;box-shadow:0 4px 24px rgba(37,99,235,.08);
+  border:1.5px solid #BFDBFE;display:flex;align-items:center;gap:1.6rem;}
 .profile-avatar{width:72px;height:72px;border-radius:50%;
-  background:linear-gradient(135deg,#DBEAFE,#EEF4FF);
+  background:linear-gradient(135deg,#DBEAFE,#EFF6FF);
   display:flex;align-items:center;justify-content:center;
-  font-size:2rem;flex-shrink:0;border:2px solid #3B82F6;}
-.admin-badge{display:inline-block;background:#FEF3C7;color:#D97706;
-  font-size:.7rem;font-weight:700;padding:.1rem .5rem;border-radius:20px;margin-left:.4rem;}
-.profile-name{font-family:'DM Serif Display',serif;font-size:1.4rem;color:#1a1a1a;margin-bottom:.2rem;}
-.profile-id{font-size:.82rem;color:#9CA3AF;font-weight:500;}
-.mypage-section-title{font-size:.9rem;font-weight:600;color:#1a1a1a;
-  letter-spacing:.06em;text-transform:uppercase;margin:1.6rem 0 .8rem;}
-.temp-bar-wrap{background:#F3F4F6;border-radius:20px;height:12px;margin:.4rem 0 .2rem;overflow:hidden;}
+  font-size:2rem;flex-shrink:0;border:2px solid #2563EB;}
+.admin-badge{display:inline-block;background:#DBEAFE;color:#1D4ED8;
+  font-size:.7rem;font-weight:700;padding:.1rem .5rem;
+  border-radius:20px;margin-left:.4rem;}
+.profile-name{font-family:'DM Serif Display',serif;font-size:1.4rem;
+  color:#0F172A;margin-bottom:.2rem;}
+.profile-id{font-size:.82rem;color:#94A3B8;font-weight:500;}
+.mypage-section-title{font-size:.9rem;font-weight:700;color:#1D4ED8;
+  letter-spacing:.06em;text-transform:uppercase;
+  margin:1.6rem 0 .8rem;padding-bottom:.4rem;
+  border-bottom:2px solid #DBEAFE;}
+.temp-bar-wrap{background:#DBEAFE;border-radius:20px;height:12px;
+  margin:.4rem 0 .2rem;overflow:hidden;}
 .temp-bar{height:100%;border-radius:20px;transition:width .4s;}
-.admin-pot-card{border:1.5px solid #E5E7EB;border-radius:12px;
-  padding:.8rem 1rem;margin-bottom:.6rem;background:#FAFAFA;}
-.user-card{border:1.5px solid #E5E7EB;border-radius:12px;
-  padding:.8rem 1rem;margin-bottom:.6rem;background:#FAFAFA;
+.admin-pot-card{border:1.5px solid #BFDBFE;border-radius:12px;
+  padding:.8rem 1rem;margin-bottom:.6rem;background:#F8FBFF;}
+.admin-pot-card:hover{border-color:#2563EB;background:#EFF6FF;}
+.user-card{border:1.5px solid #BFDBFE;border-radius:12px;
+  padding:.8rem 1rem;margin-bottom:.6rem;background:#F8FBFF;
   display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;}
-.credit-badge{display:inline-block;background:#FEF3C7;color:#D97706;
+.credit-badge{display:inline-block;background:#FEF9C3;color:#B45309;
   font-size:.72rem;font-weight:700;padding:.15rem .55rem;border-radius:20px;}
 </style>
 """
@@ -50,8 +57,8 @@ def render_auth_page():
     if step == "choice":
         st.markdown("""
         <div style="text-align:center;margin-top:2.5rem;">
-          <p style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:#1a1a1a;margin-bottom:.3rem">마이페이지</p>
-          <p style="font-size:.85rem;color:#9CA3AF;">로그인하거나 새 계정을 만들어 보세요</p>
+          <p style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:#0F172A;margin-bottom:.3rem">마이페이지</p>
+          <p style="font-size:.85rem;color:#94A3B8;">로그인하거나 새 계정을 만들어 보세요</p>
         </div>""", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
@@ -63,10 +70,10 @@ def render_auth_page():
         st.markdown("""<style>
         div[data-testid="stHorizontalBlock"]:not(:last-child) button{
           height:120px !important;font-size:1rem !important;border-radius:16px !important;
-          border:2px solid #E5E7EB !important;background:#fff !important;
-          color:#1a1a1a !important;font-weight:600 !important;white-space:pre-line !important;}
+          border:2px solid #BFDBFE !important;background:#FFFFFF !important;
+          color:#0F172A !important;font-weight:600 !important;white-space:pre-line !important;}
         div[data-testid="stHorizontalBlock"]:not(:last-child) button:hover{
-          border-color:#3B82F6 !important;background:#F0F7FF !important;}
+          border-color:#2563EB !important;background:#EFF6FF !important;}
         </style>""", unsafe_allow_html=True)
 
     elif step == "login":
@@ -140,11 +147,11 @@ def render_my_page():
         lt    = temp_label(temp)
         st.markdown(f"""
         <div style="margin-bottom:.8rem;">
-          <div style="font-size:.8rem;color:#6B7280;margin-bottom:.3rem;">
+          <div style="font-size:.8rem;color:#64748B;margin-bottom:.3rem;">
             🌡️ 매너 온도 &nbsp;
             <span style="font-weight:700;color:{color};font-size:1rem;">{temp}°</span>
             &nbsp;{lt}&nbsp;
-            <span style="font-size:.72rem;color:#9CA3AF;">(평가 {cnt}회)</span>
+            <span style="font-size:.72rem;color:#94A3B8;">(평가 {cnt}회)</span>
           </div>
           <div class="temp-bar-wrap">
             <div class="temp-bar" style="width:{temp}%;background:{color};"></div>
@@ -173,7 +180,7 @@ def render_my_page():
                 st.markdown(f"""
                 <div class="admin-pot-card">
                   <b>{p['item_label']}</b> {s} | 신청자 {len(p['applicants'])}명<br>
-                  <span style="font-size:.78rem;color:#6B7280;">
+                  <span style="font-size:.78rem;color:#64748B;">
                     개당 {p['price_per_unit']:,}원 | {p['created_at'][:10]}
                   </span>
                 </div>""", unsafe_allow_html=True)
