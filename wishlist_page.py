@@ -470,7 +470,18 @@ def render_wishlist_page():
 
                 st.markdown("**📍 방문할 편의점 위치**")
                 st.caption("지도를 클릭하면 좌표가 자동으로 입력됩니다. 위치 이름도 입력해 주세요.")
-                visit_lat, visit_lng = _map_pick_with_coords("cvs_visit", height=390)
+                visit_lat, visit_lng = _map_pick_with_coords(
+    "cvs_visit",
+    height=390,
+    initial_lat=st.session_state.get(
+        "_coord_lat_cvs_visit",
+        37.5665
+    ),
+    initial_lng=st.session_state.get(
+        "_coord_lng_cvs_visit",
+        126.9780
+    ),
+)
                 visit_loc = st.text_input("편의점 이름/위치 설명",
                                           placeholder="예: GS25 역삼점",
                                           key="cvs_visit_loc")
