@@ -50,7 +50,7 @@ def render_auth_page():
     if step == "choice":
         st.markdown("""
         <div style="text-align:center;margin-top:2.5rem;">
-          <p style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:#1a1a1a;margin-bottom:.3rem">My Page</p>
+          <p style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:#1a1a1a;margin-bottom:.3rem">마이페이지</p>
           <p style="font-size:.85rem;color:#9CA3AF;">로그인하거나 새 계정을 만들어 보세요</p>
         </div>""", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
@@ -162,10 +162,10 @@ def render_my_page():
 
     # ── 관리자 전용 ───────────────────────────────────────────────────────
     if is_admin:
-        admin_tab1, admin_tab2 = st.tabs(["🧴 생필품 파티 현황", "👥 회원 관리"])
+        admin_tab1, admin_tab2 = st.tabs(["🧴 공동구매 현황", "👥 회원 관리"])
 
         with admin_tab1:
-            st.markdown('<div class="mypage-section-title">🧴 생필품 파티 전체 현황</div>',
+            st.markdown('<div class="mypage-section-title">🧴 공동구매 파티 전체 현황</div>',
                         unsafe_allow_html=True)
             status_map = {"open": "🟢 모집중", "closed": "🟡 마감됨", "rated": "🟣 평가완료"}
             for p in sorted(ess_all(), key=lambda x: x["created_at"], reverse=True):
@@ -254,18 +254,18 @@ def render_my_page():
                                      type="secondary"):
                             delete_user(u_id)
                             push_all([u_id], "pot_disbanded",
-                                     "계정이 관리자에 의해 탈퇴 처리됐습니다.")
+                                     "관리자에 의해 계정이 탈퇴 처리됐습니다.")
                             st.success(f"@{u_id} 탈퇴 처리 완료"); st.rerun()
 
         return  # 관리자 마이페이지 끝
 
     # ── 일반 유저: 내 생필품 신청 내역 ───────────────────────────────────
-    st.markdown('<div class="mypage-section-title">🧴 내 생필품 신청</div>',
+    st.markdown('<div class="mypage-section-title">🧴 내 공동구매 신청</div>',
                 unsafe_allow_html=True)
     my_ess = [p for p in ess_all()
               if any(a["user_id"] == uid for a in p["applicants"])]
     if not my_ess:
-        st.info("신청한 생필품 파티가 없습니다.")
+        st.info("신청한 공동구매 파티가 없습니다.")
     else:
         status_map = {"open": "🟢 모집중", "closed": "🟡 마감됨", "rated": "🟣 완료"}
         for p in my_ess:
