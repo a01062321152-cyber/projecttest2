@@ -160,8 +160,12 @@ def render_cvs_popup(item: dict):
     if sub == "list":
         parties = get_waiting_parties()
         if not parties:
-            st.info("현재 출발 대기 중인 편의점 파티가 없습니다.\n"
-                    "위시리스트 탭에서 파티를 만들어 보세요!")
+            st.info("현재 출발 대기 중인 편의점 파티가 없습니다.")
+            if st.button("➕ 파티 만들러 가기", use_container_width=True, key="cvs_go_create"):
+                st.session_state.modal_item = None
+                st.session_state.modal_type = None
+                st.session_state.page = "wishlist"
+                st.rerun()
         else:
             st.markdown("**🏪 출발 대기 중인 파티 (빠른 출발 순)**")
             for p in parties:
