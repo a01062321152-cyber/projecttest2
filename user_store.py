@@ -111,11 +111,39 @@ def get_all_users() -> list:
 
 def delete_user(user_id: str) -> bool:
     db = _load_users()
-    if user_id in db and not db[user_id].get("is_admin"):
-        del db[user_id]
-        _save_users(db)
-        return True
-    return False
+    if user_id not in db or db[user_id].get("is_admin"):
+        return False
+    del db[user_id]
+    _save_users(db)
+
+    # ratings.json 데이터 삭제
+    from pathlib import Path as _P
+    import json as _json
+
+    rating_path = _P("ratings.json")
+    if rating_path.exists():
+        rd = _json.loads(rating_path.read_text(encoding="utf-8"))
+        if user_id in rd:
+            del rd[user_id]
+            rating_path.write_text(_json.dumps(rd, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # notifications.json 데이터 삭제
+    notif_path = _P("notifications.json")
+    if notif_path.exists():
+        nd = _json.loads(notif_path.read_text(encoding="utf-8"))
+        if user_id in nd:
+            del nd[user_id]
+            notif_path.write_text(_json.dumps(nd, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # roulette_spins.json 데이터 삭제
+    spin_path = _P("roulette_spins.json")
+    if spin_path.exists():
+        sd = _json.loads(spin_path.read_text(encoding="utf-8"))
+        if user_id in sd:
+            del sd[user_id]
+            spin_path.write_text(_json.dumps(sd, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return True
 
 # ── 크래딧 API ────────────────────────────────────────────────────────────────
 
