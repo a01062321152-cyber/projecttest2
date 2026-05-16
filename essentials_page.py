@@ -138,15 +138,15 @@ def render_essentials_popup(item: dict):
         parties = get_open_parties(label)
 
         if is_admin:
-            if st.button("➕ 파티 생성", key="ess_create_btn", use_container_width=True):
+            if st.button("➕ 공동구매 파티 생성", key="ess_create_btn", use_container_width=True):
                 pid = create_party(label, image_url, uid)
                 st.success(f"파티가 생성됐습니다! (ID: {pid})")
                 st.rerun()
 
         if not parties:
-            st.info("현재 모집 중인 파티가 없습니다.")
+            st.info("현재 진행 중인 공동구매가 없습니다.")
         else:
-            st.markdown("**📋 모집 중인 파티**")
+            st.markdown("**📋 현재 모집 중인 공동구매**")
             for p in parties:
                 cnt    = len(p["applicants"])
                 already = any(a["user_id"] == uid for a in p["applicants"])
@@ -161,7 +161,7 @@ def render_essentials_popup(item: dict):
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("📝 신청하기", key=f"ess_apply_{p['party_id']}",
+                    if st.button("📝 참여 신청", key=f"ess_apply_{p['party_id']}",
                                  use_container_width=True,
                                  disabled=already or not is_logged):
                         st.session_state.ess_sub      = "apply"
@@ -169,7 +169,7 @@ def render_essentials_popup(item: dict):
                         st.rerun()
                 with c2:
                     if is_admin:
-                        if st.button("🔍 상세보기", key=f"ess_detail_{p['party_id']}",
+                        if st.button("🔍 신청자 현황", key=f"ess_detail_{p['party_id']}",
                                      use_container_width=True):
                             st.session_state.ess_sub      = "admin_detail"
                             st.session_state.ess_party_id = p["party_id"]
@@ -195,7 +195,7 @@ def render_essentials_popup(item: dict):
                     st.session_state.ess_party_id, uid,
                     user.get("name", ""), contact, int(qty))
                 if ok2:
-                    push(uid, "pot_joined", f"'{label}' 생필품 파티에 신청됐습니다.")
+                    push(uid, "pot_joined", f"'{label}' 공동구매 파티에 신청됐습니다.")
                     st.success("신청 완료!")
                     st.session_state.ess_sub = "main"; st.rerun()
                 else:
@@ -238,7 +238,7 @@ def render_essentials_popup(item: dict):
             st.markdown("**송금 계좌**")
             pay_dest, pay_dest_err = _account_input("ess_close")
 
-            if st.button("마감 처리", use_container_width=True, key="ess_close_submit"):
+            if st.button("✅ 마감 처리", use_container_width=True, key="ess_close_submit"):
                 if pay_dest_err or not pay_dest or pay_dest.startswith("은행 선택"):
                     st.error(pay_dest_err or "계좌번호를 올바르게 입력해 주세요.")
                 elif price_per <= 0:
@@ -249,7 +249,7 @@ def render_essentials_popup(item: dict):
                         for a in applicants:
                             amount = a["qty"] * int(price_per)
                             push(a["user_id"], "pot_ended",
-                                 f"'{label}' 생필품 파티가 마감됐습니다. "
+                                 f"'{label}' 공동구매 파티가 마감됐습니다. "
                                  f"총 {amount:,}원을 [{pay_dest.strip()}]로 보내주세요! "
                                  f"({a['qty']}개 × {int(price_per):,}원)")
                         st.success("마감 처리 및 알림 발송 완료!"); st.rerun()
@@ -262,7 +262,7 @@ def render_essentials_popup(item: dict):
             st.markdown("---")
 
             # 크래딧 지급
-            st.markdown(f"**🪙 참여자 크래딧 지급** (인당 {CREDIT_PER_PURCHASE} 크래딧)")
+            st.markdown(f"**🪙 크래딧 지급** (참여자 인당 {CREDIT_PER_PURCHASE} 크래딧)")
             not_given = [a for a in applicants
                          if not is_credit_given(p["party_id"], a["user_id"])]
             if not not_given:
@@ -274,13 +274,13 @@ def render_essentials_popup(item: dict):
                         add_credits(a["user_id"], CREDIT_PER_PURCHASE)
                         mark_credit_given(p["party_id"], a["user_id"])
                         push(a["user_id"], "pot_joined",
-                             f"'{label}' 구매 참여로 {CREDIT_PER_PURCHASE} 크래딧이 지급됐습니다! 🪙")
+                             f"'{label}' 공동구매 참여로 {CREDIT_PER_PURCHASE} 🪙 크래딧이 적립됐습니다!")
                     st.success("크래딧 지급 완료!"); st.rerun()
 
             st.markdown("---")
 
             # 평가
-            st.markdown("**⭐ 참여자 평가 (1~5점)**")
+            st.markdown("**⭐ 파티 평가** (참여자 만족도 1~5점)")
             st.caption("평가 후 파티를 삭제할 수 있습니다.")
             scores = {}
             with st.form("ess_rate_form"):
@@ -288,7 +288,7 @@ def render_essentials_popup(item: dict):
                     scores[a["user_id"]] = st.slider(
                         f"@{a['user_id']} ({a['name']})",
                         1, 5, 3, key=f"rate_{p['party_id']}_{a['user_id']}")
-                submitted = st.form_submit_button("평가 제출 및 파티 종료",
+                submitted = st.form_submit_button("평가 완료 및 파티 종료",
                                                    use_container_width=True)
             if submitted:
                 # 평가 점수 → rating_store (10점 만점으로 환산: ×2)
@@ -297,7 +297,7 @@ def render_essentials_popup(item: dict):
                 save_ratings(p["party_id"], scores)
                 for a in applicants:
                     push(a["user_id"], "pot_ended",
-                         f"'{label}' 파티 평가가 완료됐습니다. 매너 온도를 확인하세요!")
+                         f"'{label}' 공동구매 파티 평가가 완료됐습니다. 매너 온도를 확인해보세요!")
                 st.success("평가 완료!"); st.rerun()
 
         # ── 삭제 (rated 상태) ──────────────────────────────────────────────
