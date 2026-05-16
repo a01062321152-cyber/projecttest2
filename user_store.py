@@ -111,3 +111,30 @@ def delete_list_item(list_key, idx):
     removed = items.pop(idx)
     _save_lists(data)
     return removed
+
+def delete_list(list_key: str) -> bool:
+    """리스트 전체 삭제. list1·list2는 삭제 불가. True/False 반환."""
+    if list_key in ("list1", "list2"): return False
+    data = _load_lists()
+    if list_key not in data: return False
+    del data[list_key]
+    _save_lists(data)
+    return True
+
+def add_list(title: str, list_type: str = "essentials") -> str:
+    """새 리스트 추가. list3, list4... 자동 키 생성. 생성된 key 반환."""
+    data = _load_lists()
+    existing_nums = []
+    for k in data:
+        if k.startswith("list"):
+            try: existing_nums.append(int(k[4:]))
+            except ValueError: pass
+    next_num = max(existing_nums, default=0) + 1
+    new_key  = f"list{next_num}"
+    data[new_key] = {
+        "title": title.strip() or f"List {next_num}",
+        "type": list_type,
+        "items": [{"label": "Item 1", "image_url": "", "price": 0}],
+    }
+    _save_lists(data)
+    return new_key
