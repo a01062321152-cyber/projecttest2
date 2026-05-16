@@ -42,14 +42,21 @@ def create_party(creator_id: str, creator_name: str,
     return pid
 
 # ── 조회 ─────────────────────────────────────────────────────────────────────
+def _migrate(p: dict) -> dict:
+    """기존 파티 데이터에 visit 필드 없으면 기본값 추가"""
+    p.setdefault("visit_location", "")
+    p.setdefault("visit_lat", 0.0)
+    p.setdefault("visit_lng", 0.0)
+    return p
+
 def get_waiting_parties() -> list:
     d = _r()
-    result = [p for p in d.values() if p["status"] == "waiting"]
-    # 출발 시간 오름차순
+    result = [_migrate(p) for p in d.values() if p["status"] == "waiting"]
     return sorted(result, key=lambda x: x["depart_time"])
 
 def get_party(pid: str) -> dict | None:
-    return _r().get(pid)
+    p = _r().get(pid)
+    return _migrate(p) if p else None
 
 def get_parties_by_user(user_id: str) -> list:
     """내가 파티장이거나 주문자인 파티"""
