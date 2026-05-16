@@ -144,9 +144,8 @@ if st.session_state.show_notif and is_logged_in:
 # ── 카드 섹션 렌더 ────────────────────────────────────────────────────────────
 def render_card_section(title: str, items: list, list_key: str):
     """
-    카드 + 버튼을 하나의 components.html 안에 통합.
-    버튼이 각 카드 바로 아래에 같은 너비로 붙어서 같이 스크롤됨.
-    클릭 → query_params → Streamlit rerun → 팝업 오픈.
+    st.columns 안에 이미지(st.markdown) + 버튼(st.button)을 같이 넣어
+    항상 붙어서 같이 움직임. 이미지 클릭도 버튼으로 처리.
     """
     st.markdown(
         f'<p style="font-size:1rem;font-weight:600;color:#1a1a1a;'
@@ -158,130 +157,88 @@ def render_card_section(title: str, items: list, list_key: str):
         st.caption("항목이 없습니다.")
         return
 
-    # 아이템 데이터를 JS에 넘길 JSON
-    import json as _json
-    items_json = _json.dumps(
-        [{"label": it.get("label",""), "image_url": it.get("image_url",""),
-          "price": it.get("price", 0)} for it in items],
-        ensure_ascii=False)
+    # 카드 공통 CSS (한 번만 주입)
+    st.markdown("""
+    <style>
+    /* 카드 이미지 래퍼 */
+    .card-img-wrap {
+        width:100%; aspect-ratio:1/1;
+        border-radius:12px 12px 0 0;
+        overflow:hidden; position:relative;
+        border:2px solid #3B82F6; border-bottom:none;
+        background:linear-gradient(135deg,#EEF4FF,#DBEAFE);
+    }
+    .card-img-wrap img {
+        width:100%; height:100%; object-fit:cover; display:block;
+    }
+    .card-img-placeholder {
+        width:100%; height:100%;
+        background:linear-gradient(135deg,#EEF4FF,#DBEAFE);
+        display:flex; align-items:center; justify-content:center;
+        font-size:2.5rem;
+    }
+    .card-price-tag {
+        position:absolute; top:8px; right:8px;
+        font-size:.68rem; font-weight:700; color:#fff;
+        background:rgba(59,130,246,.88);
+        padding:.15rem .55rem; border-radius:20px;
+    }
+    /* 버튼을 카드 스타일로 - 이미지 바로 아래 붙임 */
+    div[data-card-btn] > div > button {
+        border-radius:0 0 12px 12px !important;
+        border:2px solid #3B82F6 !important;
+        border-top:none !important;
+        background:#fff !important;
+        color:#3B82F6 !important;
+        font-weight:600 !important;
+        font-size:.82rem !important;
+        margin-top:0 !important;
+        padding:.55rem .5rem !important;
+        transition:background .15s !important;
+    }
+    div[data-card-btn] > div > button:hover {
+        background:#EFF6FF !important;
+    }
+    /* column 사이 gap 제거 */
+    div[data-card-btn] {
+        padding-left:0.3rem !important;
+        padding-right:0.3rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    columns_html = ""
-    for i, item in enumerate(items):
+    cols = st.columns(n)
+    for i, (col, item) in enumerate(zip(cols, items)):
         label = item.get("label", "")
         img   = item.get("image_url", "")
         price = item.get("price", 0)
-        bg    = f"url('{img}') center/cover no-repeat" if img else "linear-gradient(135deg,#EEF4FF,#DBEAFE)"
-        ptag  = f'<span class="card-price">{price:,}원</span>' if price else ""
-        columns_html += f"""
-        <div class="col-wrap">
-          <div class="card">
-            <div class="card-img" style="background:{bg};"></div>
-            {ptag}
-            <span class="card-label">{label}</span>
-          </div>
-          <button class="pot-btn" onclick="selectItem({i})">🛒 {label}</button>
-        </div>"""
+        ptag  = f'<div class="card-price-tag">{price:,}원</div>' if price else ""
 
-    components.html(f"""<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
-<style>
-*{{box-sizing:border-box;margin:0;padding:0;}}
-body{{background:transparent;font-family:'DM Sans',sans-serif;padding:0 0 6px 0;}}
+        with col:
+            # 이미지 (카드 상단)
+            if img:
+                st.markdown(f"""
+                <div class="card-img-wrap">
+                  <img src="{img}" alt="{label}">
+                  {ptag}
+                </div>""", unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="card-img-wrap">
+                  <div class="card-img-placeholder">🛍️</div>
+                  {ptag}
+                </div>""", unsafe_allow_html=True)
 
-/* 가로 스크롤 래퍼 */
-.scroll-wrap{{
-  display:flex;
-  gap:1.2rem;
-  overflow-x:auto;
-  background:#EDEBE5;
-  border-radius:14px;
-  padding:1.2rem 1.2rem 1rem;
-  border:1.5px solid #D8D4CB;
-}}
-.scroll-wrap::-webkit-scrollbar{{height:4px;}}
-.scroll-wrap::-webkit-scrollbar-thumb{{background:#C2BEAF;border-radius:4px;}}
+            # 버튼 (카드 하단, 이미지와 붙음)
+            st.markdown('<div data-card-btn="1">', unsafe_allow_html=True)
+            if st.button(f"🛒 {label}", key=f"card_{list_key}_{i}",
+                         use_container_width=True):
+                st.session_state.pot_modal_item = item
+                st.session_state.pot_sub = "main"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-/* 카드 + 버튼을 세로로 묶는 컬럼 */
-.col-wrap{{
-  display:flex;
-  flex-direction:column;
-  flex:0 0 200px;
-  gap:8px;
-}}
-
-/* 카드 */
-.card{{
-  width:200px;
-  height:220px;
-  border-radius:12px;
-  border:2px solid #3B82F6;
-  background:#fff;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-end;
-  padding-bottom:.8rem;
-  position:relative;
-  overflow:hidden;
-  cursor:default;
-  transition:transform .18s,box-shadow .18s;
-}}
-.card:hover{{transform:translateY(-4px);box-shadow:0 10px 28px rgba(59,130,246,.18);}}
-.card-img{{position:absolute;inset:0;}}
-.card-price{{
-  position:absolute;top:8px;right:8px;
-  font-size:.68rem;font-weight:700;color:#fff;
-  background:rgba(59,130,246,.85);padding:.15rem .55rem;border-radius:20px;
-}}
-.card-label{{
-  position:relative;font-size:.78rem;font-weight:600;color:#3B82F6;
-  letter-spacing:.04em;background:rgba(255,255,255,.88);
-  padding:.25rem .7rem;border-radius:20px;
-}}
-
-/* 구메팟 버튼 */
-.pot-btn{{
-  width:100%;
-  padding:.55rem 0;
-  border-radius:10px;
-  border:1.5px solid #DBEAFE;
-  background:#fff;
-  color:#3B82F6;
-  font-family:'DM Sans',sans-serif;
-  font-size:.8rem;
-  font-weight:600;
-  cursor:pointer;
-  transition:background .15s,border-color .15s,transform .15s;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}}
-.pot-btn:hover{{
-  background:#EFF6FF;
-  border-color:#3B82F6;
-  transform:translateY(-1px);
-}}
-.pot-btn:active{{transform:translateY(0);}}
-</style>
-</head><body>
-<div class="scroll-wrap">
-  {columns_html}
-</div>
-<script>
-var ITEMS = {items_json};
-var LIST_KEY = "{list_key}";
-
-function selectItem(idx) {{
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_card_list', LIST_KEY);
-  url.searchParams.set('_card_idx',  idx);
-  window.parent.location.href = url.toString();
-}}
-</script>
-</body></html>""", height=320, scrolling=False)
-
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1.4rem'></div>", unsafe_allow_html=True)
 
 
 # ── 관리자 편집 패널 ──────────────────────────────────────────────────────────
