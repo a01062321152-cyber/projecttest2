@@ -292,6 +292,11 @@ def render_wishlist_page():
                                 components.html(_map_view_inline(
                                     p["gather_lat"], p["gather_lng"], p["gather_location"]),
                                     height=260, scrolling=False)
+                                if st.button("🗑️ 파티 삭제", key=f"cvs_del_{p['party_id']}",
+                                             use_container_width=True):
+                                    from cvs_store import delete_party as cvs_del
+                                    cvs_del(p["party_id"])
+                                    st.success("파티가 삭제됐습니다."); st.rerun()
 
 
     # ══════════════════════════════════════════════════════════════════════
