@@ -215,4 +215,3 @@ def render_my_page():
               출발 {p['depart_time']}<br>
               {f"내 주문: {order_txt}" if order_txt else ""}
             </div>""", unsafe_allow_html=True)
-          
