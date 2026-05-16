@@ -15,7 +15,7 @@ from notification_store import (get_notifications, get_unread_count,
 # ── 초기화 ────────────────────────────────────────────────────────────────────
 initialize()
 
-st.set_page_config(page_title="구메", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="원박스", layout="wide", initial_sidebar_state="collapsed")
 
 for k, v in [("page","main"),("modal_item",None),("modal_type",None),
               ("show_notif",False),("ess_sub","main"),("ess_party_id",None),
